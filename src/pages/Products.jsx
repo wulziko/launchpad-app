@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { storage } from '../lib/supabase'
 import { PageLoading, CardSkeleton } from '../components/LoadingSpinner'
@@ -18,8 +19,40 @@ import {
   X,
   AlertCircle,
   Upload,
-  Image
+  Image,
+  Sparkles,
+  Package,
 } from 'lucide-react'
+
+// Card animation variants
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.05,
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  }),
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
+}
+
+// Column animation variants
+const columnVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  }),
+}
 
 export default function Products() {
   const [view, setView] = useState('kanban')
@@ -27,7 +60,6 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('')
   const { products, STATUSES, updateProductStatus, addProduct, deleteProduct, loading, error } = useData()
 
-  // Safe filtering with null checks
   const filteredProducts = (products || []).filter(p => {
     if (!p) return false
     const name = p.name?.toLowerCase() || ''
@@ -45,7 +77,6 @@ export default function Products() {
       await updateProductStatus(productId, newStatus)
     } catch (err) {
       console.error('Failed to update status:', err)
-      // TODO: Show toast notification
     }
   }
 
@@ -58,22 +89,21 @@ export default function Products() {
     }
   }
 
-  // Loading state
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-8 bg-dark-700 rounded w-32 mb-2 animate-pulse" />
-            <div className="h-4 bg-dark-700 rounded w-64 animate-pulse" />
+            <div className="h-8 bg-dark-800 rounded-lg w-32 mb-2 skeleton" />
+            <div className="h-4 bg-dark-800 rounded w-64 skeleton" />
           </div>
-          <div className="h-10 bg-dark-700 rounded w-32 animate-pulse" />
+          <div className="h-10 bg-dark-800 rounded-xl w-32 skeleton" />
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="flex-shrink-0 w-72">
-              <div className="bg-dark-900 rounded-xl border border-dark-700 p-4">
-                <div className="h-6 bg-dark-700 rounded w-32 mb-4 animate-pulse" />
+              <div className="bg-dark-900/70 rounded-2xl border border-dark-800 p-4">
+                <div className="h-6 bg-dark-800 rounded w-32 mb-4 skeleton" />
                 <div className="space-y-3">
                   <CardSkeleton />
                   <CardSkeleton />
@@ -86,245 +116,405 @@ export default function Products() {
     )
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center py-12"
+      >
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">Failed to load products</h2>
         <p className="text-dark-400 mb-4">{error}</p>
-        <button onClick={() => window.location.reload()} className="btn btn-primary">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.location.reload()}
+          className="btn btn-primary"
+        >
           Try Again
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     )
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-white">Products</h1>
-          <p className="text-dark-400 mt-1">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center gap-2 mb-1"
+          >
+            <Package className="w-5 h-5 text-primary-400" />
+            <span className="text-sm text-primary-400 font-medium">Product Pipeline</span>
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="text-3xl font-bold text-white"
+          >
+            Products
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-dark-400 mt-1"
+          >
             Manage your product pipeline from discovery to launch
-          </p>
+          </motion.p>
         </div>
-        <button onClick={() => setShowNewModal(true)} className="btn btn-primary">
-          <Plus className="w-5 h-5" />
-          Add Product
-        </button>
-      </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.25 }}
+        >
+          <motion.button
+            onClick={() => setShowNewModal(true)}
+            whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-primary"
+          >
+            <Plus className="w-5 h-5" />
+            Add Product
+          </motion.button>
+        </motion.div>
+      </motion.div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-col sm:flex-row gap-4"
+      >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
-          <input
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
+          <motion.input
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             type="text"
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10"
+            className="input pl-12"
           />
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-secondary">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-secondary"
+          >
             <Filter className="w-4 h-4" />
             Filter
-          </button>
-          <div className="flex bg-dark-800 rounded-lg p-1">
-            <button
+          </motion.button>
+          <div className="flex bg-dark-800/50 border border-dark-700 rounded-xl p-1">
+            <motion.button
               onClick={() => setView('kanban')}
-              className={`p-2 rounded-md transition-colors ${view === 'kanban' ? 'bg-dark-600 text-white' : 'text-dark-400 hover:text-white'}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`p-2 rounded-lg transition-all ${
+                view === 'kanban' 
+                  ? 'bg-dark-700 text-white shadow-sm' 
+                  : 'text-dark-400 hover:text-white'
+              }`}
             >
               <LayoutGrid className="w-5 h-5" />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setView('list')}
-              className={`p-2 rounded-md transition-colors ${view === 'list' ? 'bg-dark-600 text-white' : 'text-dark-400 hover:text-white'}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`p-2 rounded-lg transition-all ${
+                view === 'list' 
+                  ? 'bg-dark-700 text-white shadow-sm' 
+                  : 'text-dark-400 hover:text-white'
+              }`}
             >
               <List className="w-5 h-5" />
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Empty state */}
-      {filteredProducts.length === 0 && !searchQuery && (
-        <EmptyState
-          type="products"
-          title="No products yet"
-          description="Add your first product to start managing your pipeline."
-          action={() => setShowNewModal(true)}
-          actionLabel="Add Product"
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {filteredProducts.length === 0 && !searchQuery && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <EmptyState
+              type="products"
+              title="No products yet"
+              description="Add your first product to start managing your pipeline."
+              action={() => setShowNewModal(true)}
+              actionLabel="Add Product"
+            />
+          </motion.div>
+        )}
 
-      {/* No search results */}
-      {filteredProducts.length === 0 && searchQuery && (
-        <div className="text-center py-12">
-          <p className="text-dark-400">No products match "{searchQuery}"</p>
-        </div>
-      )}
+        {filteredProducts.length === 0 && searchQuery && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-center py-12"
+          >
+            <Search className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <p className="text-dark-400">No products match "{searchQuery}"</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Kanban View */}
-      {view === 'kanban' && filteredProducts.length > 0 && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {(STATUSES || []).map((status) => {
-            const statusProducts = getProductsByStatus(status?.id)
-            return (
-              <div key={status?.id || Math.random()} className="flex-shrink-0 w-72">
-                <div className="bg-dark-900 rounded-xl border border-dark-700 p-4">
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-3 h-3 rounded-full ${status?.color || 'bg-dark-600'}`} />
-                      <h3 className="font-semibold text-white">{status?.label || 'Unknown'}</h3>
-                      <span className="text-sm text-dark-400">({statusProducts.length})</span>
-                    </div>
-                  </div>
-
-                  {/* Cards */}
-                  <div className="space-y-3">
-                    {statusProducts.map((product) => (
-                      <ProductCard
-                        key={product?.id || Math.random()}
-                        product={product}
-                        statuses={STATUSES || []}
-                        onStatusChange={handleStatusChange}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-
-                    {statusProducts.length === 0 && (
-                      <div className="py-8 text-center text-dark-500 text-sm">
-                        No products
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* List View */}
-      {view === 'list' && filteredProducts.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm text-dark-400 border-b border-dark-700">
-                <th className="pb-3 pl-4 font-medium">Product</th>
-                <th className="pb-3 font-medium">Market</th>
-                <th className="pb-3 font-medium">Niche</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 pr-4 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((product) => {
-                if (!product) return null
-                const statusInfo = (STATUSES || []).find(s => s?.id === product?.status)
+      <AnimatePresence mode="wait">
+        {view === 'kanban' && filteredProducts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6"
+          >
+            <LayoutGroup>
+              {(STATUSES || []).map((status, columnIndex) => {
+                const statusProducts = getProductsByStatus(status?.id)
                 return (
-                  <tr key={product.id} className="border-b border-dark-800 last:border-0 hover:bg-dark-800/50 transition-colors">
-                    <td className="py-4 pl-4">
-                      <Link to={`/products/${product.id}`} className="flex items-center gap-3 hover:text-primary-400 transition-colors">
-                        <div className="w-10 h-10 rounded-lg bg-dark-700 flex items-center justify-center text-lg">
-                          📦
+                  <motion.div
+                    key={status?.id || Math.random()}
+                    custom={columnIndex}
+                    variants={columnVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="flex-shrink-0 w-72"
+                  >
+                    <div className="bg-dark-900/50 backdrop-blur-sm rounded-2xl border border-dark-800 p-4">
+                      {/* Column Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <motion.span
+                            className={`w-3 h-3 rounded-full ${status?.color || 'bg-dark-600'}`}
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ repeat: Infinity, duration: 2, delay: columnIndex * 0.2 }}
+                          />
+                          <h3 className="font-semibold text-white">{status?.label || 'Unknown'}</h3>
+                          <span className="text-sm text-dark-500 bg-dark-800 px-2 py-0.5 rounded-full">
+                            {statusProducts.length}
+                          </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-white">{product.name || 'Untitled'}</p>
-                          <p className="text-xs text-dark-400 mt-0.5 max-w-xs truncate">{product.description || ''}</p>
+                      </div>
+
+                      {/* Cards */}
+                      <AnimatePresence mode="popLayout">
+                        <div className="space-y-3">
+                          {statusProducts.map((product, cardIndex) => (
+                            <ProductCard
+                              key={product?.id || Math.random()}
+                              product={product}
+                              statuses={STATUSES || []}
+                              onStatusChange={handleStatusChange}
+                              onDelete={handleDelete}
+                              index={cardIndex}
+                            />
+                          ))}
+
+                          {statusProducts.length === 0 && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="py-8 text-center text-dark-600 text-sm border-2 border-dashed border-dark-800 rounded-xl"
+                            >
+                              No products
+                            </motion.div>
+                          )}
                         </div>
-                      </Link>
-                    </td>
-                    <td className="py-4 text-dark-300">{product.market || '-'}</td>
-                    <td className="py-4 text-dark-300">{product.niche || '-'}</td>
-                    <td className="py-4">
-                      <span className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'}`}>
-                        {statusInfo?.label || product.status || 'Unknown'}
-                      </span>
-                    </td>
-                    <td className="py-4 pr-4">
-                      <Link to={`/products/${product.id}`} className="btn btn-ghost p-2">
-                        <ChevronRight className="w-5 h-5" />
-                      </Link>
-                    </td>
-                  </tr>
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </LayoutGroup>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* List View */}
+      <AnimatePresence mode="wait">
+        {view === 'list' && filteredProducts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="card overflow-hidden"
+          >
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm text-dark-500 border-b border-dark-800">
+                  <th className="pb-4 pl-4 font-medium">Product</th>
+                  <th className="pb-4 font-medium">Market</th>
+                  <th className="pb-4 font-medium">Niche</th>
+                  <th className="pb-4 font-medium">Status</th>
+                  <th className="pb-4 pr-4 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product, index) => {
+                  if (!product) return null
+                  const statusInfo = (STATUSES || []).find(s => s?.id === product?.status)
+                  return (
+                    <motion.tr
+                      key={product.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="border-b border-dark-800/50 last:border-0 group"
+                    >
+                      <td className="py-4 pl-4">
+                        <Link to={`/products/${product.id}`} className="flex items-center gap-3">
+                          <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            className="w-10 h-10 rounded-xl bg-gradient-to-br from-dark-700 to-dark-800 flex items-center justify-center text-lg"
+                          >
+                            📦
+                          </motion.div>
+                          <div>
+                            <p className="font-medium text-white group-hover:text-primary-400 transition-colors">
+                              {product.name || 'Untitled'}
+                            </p>
+                            <p className="text-xs text-dark-500 mt-0.5 max-w-xs truncate">
+                              {product.description || ''}
+                            </p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="py-4 text-dark-400">{product.market || '-'}</td>
+                      <td className="py-4 text-dark-400">{product.niche || '-'}</td>
+                      <td className="py-4">
+                        <motion.span
+                          whileHover={{ scale: 1.05 }}
+                          className={`badge ${statusInfo?.color || 'bg-dark-700'} ${statusInfo?.textColor || 'text-dark-300'}`}
+                        >
+                          {statusInfo?.label || product.status || 'Unknown'}
+                        </motion.span>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <Link to={`/products/${product.id}`}>
+                          <motion.button
+                            whileHover={{ scale: 1.1, x: 2 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2 text-dark-500 hover:text-white hover:bg-dark-800 rounded-lg transition-colors"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </motion.button>
+                        </Link>
+                      </td>
+                    </motion.tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* New Product Modal */}
-      {showNewModal && (
-        <NewProductModal
-          onClose={() => setShowNewModal(false)}
-          onAdd={addProduct}
-        />
-      )}
+      <AnimatePresence>
+        {showNewModal && (
+          <NewProductModal
+            onClose={() => setShowNewModal(false)}
+            onAdd={addProduct}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-function ProductCard({ product, statuses, onStatusChange, onDelete }) {
+function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   
-  // Safety check
   if (!product) return null
   
   const statusInfo = (statuses || []).find(s => s?.id === product?.status) || {}
 
   return (
-    <div className="bg-dark-800 rounded-lg p-4 hover:bg-dark-750 transition-colors group">
-      <div className="flex items-start justify-between mb-2">
-        <Link to={`/products/${product.id}`} className="font-medium text-white hover:text-primary-400 transition-colors">
+    <motion.div
+      layout
+      custom={index}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileHover={{ y: -2, scale: 1.01 }}
+      className="bg-dark-800/50 backdrop-blur-sm border border-dark-700/50 rounded-xl p-4 group cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <Link 
+          to={`/products/${product.id}`} 
+          className="font-medium text-white hover:text-primary-400 transition-colors flex-1"
+        >
           {product.name || 'Untitled Product'}
         </Link>
         <div className="relative">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1 text-dark-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+          <motion.button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-dark-700"
           >
             <MoreVertical className="w-4 h-4" />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-dark-700 border border-dark-600 rounded-lg shadow-xl py-1 min-w-[140px]">
-                <Link
-                  to={`/products/${product.id}`}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-dark-200 hover:bg-dark-600"
+          </motion.button>
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 min-w-[140px] overflow-hidden"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  View Details
-                </Link>
-                <button
-                  onClick={() => { onDelete(product.id); setMenuOpen(false) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-dark-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
+                  <Link
+                    to={`/products/${product.id}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-dark-300 hover:bg-dark-700 hover:text-white transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Details
+                  </Link>
+                  <button
+                    onClick={() => { onDelete(product.id); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      <p className="text-sm text-dark-400 mb-3 line-clamp-2">{product.description || 'No description'}</p>
+      <p className="text-sm text-dark-500 mb-3 line-clamp-2">{product.description || 'No description'}</p>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-dark-400">
+        <div className="flex items-center gap-2 text-xs text-dark-500">
           <span>{product.market || '-'}</span>
           {product.niche && (
             <>
-              <span>•</span>
+              <span className="w-1 h-1 rounded-full bg-dark-600" />
               <span>{product.niche}</span>
             </>
           )}
@@ -332,45 +522,61 @@ function ProductCard({ product, statuses, onStatusChange, onDelete }) {
         
         {/* Status Dropdown */}
         <div className="relative">
-          <button
-            onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-            className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'} cursor-pointer hover:opacity-80 transition-opacity`}
+          <motion.button
+            onClick={(e) => { e.stopPropagation(); setStatusMenuOpen(!statusMenuOpen) }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`badge ${statusInfo?.color || 'bg-dark-700'} ${statusInfo?.textColor || 'text-dark-300'} cursor-pointer`}
           >
             {statusInfo?.label || product.status || 'Unknown'}
-          </button>
-          {statusMenuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-dark-700 border border-dark-600 rounded-lg shadow-xl py-1 min-w-[160px]">
-                {(statuses || []).map((status) => (
-                  <button
-                    key={status?.id || Math.random()}
-                    onClick={() => { onStatusChange(product.id, status?.id); setStatusMenuOpen(false) }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-dark-600 ${
-                      product?.status === status?.id ? 'text-primary-400' : 'text-dark-200'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
-                    {status?.label || 'Unknown'}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          </motion.button>
+          <AnimatePresence>
+            {statusMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 min-w-[160px] overflow-hidden"
+                >
+                  {(statuses || []).map((status) => (
+                    <motion.button
+                      key={status?.id || Math.random()}
+                      onClick={() => { onStatusChange(product.id, status?.id); setStatusMenuOpen(false) }}
+                      whileHover={{ backgroundColor: 'rgba(51, 65, 85, 0.5)' }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                        product?.status === status?.id ? 'text-primary-400' : 'text-dark-300'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
+                      {status?.label || 'Unknown'}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Tags */}
       {product.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
-          {product.tags.map((tag, index) => (
-            <span key={tag || index} className="text-xs px-2 py-0.5 bg-dark-700 text-dark-300 rounded">
+          {product.tags.map((tag, i) => (
+            <motion.span
+              key={tag || i}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="text-xs px-2 py-0.5 bg-dark-700/50 text-dark-400 rounded-md"
+            >
               {tag}
-            </span>
+            </motion.span>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -382,7 +588,6 @@ function NewProductModal({ onClose, onAdd }) {
     niche: '',
     targetAudience: '',
     tags: '',
-    // n8n workflow fields
     language: 'English',
     country: 'United States',
     gender: 'All',
@@ -403,19 +608,16 @@ function NewProductModal({ onClose, onAdd }) {
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0]
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         setError('Please select an image file')
         return
       }
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError('Image must be less than 5MB')
         return
       }
       setImageFile(file)
       setError('')
-      // Create preview
       const reader = new FileReader()
       reader.onload = (e) => setImagePreview(e.target.result)
       reader.readAsDataURL(file)
@@ -433,7 +635,6 @@ function NewProductModal({ onClose, onAdd }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Validation
     if (!formData.name.trim()) {
       setError('Product name is required')
       return
@@ -445,7 +646,6 @@ function NewProductModal({ onClose, onAdd }) {
     try {
       let productImageUrl = formData.product_image_url
       
-      // Upload image if selected
       if (imageFile) {
         setUploadingImage(true)
         const fileExt = imageFile.name.split('.').pop()
@@ -476,25 +676,72 @@ function NewProductModal({ onClose, onAdd }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="relative bg-dark-900/95 backdrop-blur-xl border border-dark-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Add New Product</h2>
-          <button onClick={onClose} className="text-dark-400 hover:text-white" disabled={submitting}>
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', bounce: 0.5 }}
+              className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center"
+            >
+              <Sparkles className="w-5 h-5 text-primary-400" />
+            </motion.div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Add New Product</h2>
+              <p className="text-sm text-dark-500">Create a new product in your pipeline</p>
+            </div>
+          </div>
+          <motion.button
+            onClick={onClose}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl transition-colors"
+            disabled={submitting}
+          >
             <X className="w-5 h-5" />
-          </button>
+          </motion.button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
           
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <label className="block text-sm font-medium text-dark-300 mb-2">Product Name *</label>
             <input
               type="text"
@@ -505,20 +752,28 @@ function NewProductModal({ onClose, onAdd }) {
               required
               disabled={submitting}
             />
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
             <label className="block text-sm font-medium text-dark-300 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input min-h-[80px]"
+              className="input min-h-[80px] resize-none"
               placeholder="Brief description of the product..."
               disabled={submitting}
             />
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <label className="block text-sm font-medium text-dark-300 mb-2">Niche *</label>
             <select
               value={formData.niche}
@@ -538,9 +793,14 @@ function NewProductModal({ onClose, onAdd }) {
               <option value="Kitchen">Kitchen</option>
               <option value="Other">Other</option>
             </select>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="grid grid-cols-3 gap-4"
+          >
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Country</label>
               <select
@@ -588,9 +848,13 @@ function NewProductModal({ onClose, onAdd }) {
                 <option value="Male">Male</option>
               </select>
             </div>
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <label className="block text-sm font-medium text-dark-300 mb-2">Product Image</label>
             <input
               ref={fileInputRef}
@@ -601,135 +865,188 @@ function NewProductModal({ onClose, onAdd }) {
               disabled={submitting}
             />
             {imagePreview ? (
-              <div className="relative inline-block">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative inline-block"
+              >
                 <img
                   src={imagePreview}
                   alt="Product preview"
-                  className="w-32 h-32 object-cover rounded-lg border border-dark-600"
+                  className="w-32 h-32 object-cover rounded-xl border border-dark-700"
                 />
-                <button
+                <motion.button
                   type="button"
                   onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg"
                   disabled={submitting}
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+                  <X className="w-3 h-3" />
+                </motion.button>
+              </motion.div>
             ) : (
-              <button
+              <motion.button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-dark-600 rounded-lg p-6 hover:border-dark-500 hover:bg-dark-800/50 transition-colors"
+                whileHover={{ scale: 1.01, borderColor: 'rgba(236, 72, 153, 0.5)' }}
+                whileTap={{ scale: 0.99 }}
+                className="w-full border-2 border-dashed border-dark-700 rounded-xl p-6 hover:bg-dark-800/50 transition-all"
                 disabled={submitting}
               >
-                <div className="flex flex-col items-center gap-2 text-dark-400">
+                <div className="flex flex-col items-center gap-2 text-dark-500">
                   <Upload className="w-8 h-8" />
                   <span className="text-sm">Click to upload image</span>
                   <span className="text-xs">PNG, JPG up to 5MB</span>
                 </div>
-              </button>
+              </motion.button>
             )}
-            <p className="text-xs text-dark-500 mt-2">Used for banner generation</p>
-          </div>
+            <p className="text-xs text-dark-600 mt-2">Used for banner generation</p>
+          </motion.div>
 
           {/* Collapsible Advanced Section */}
-          <div className="border border-dark-700 rounded-lg">
-            <button
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="border border-dark-700 rounded-xl overflow-hidden"
+          >
+            <motion.button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between p-3 text-left text-dark-300 hover:text-white transition-colors"
+              whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.3)' }}
+              className="w-full flex items-center justify-between p-4 text-left text-dark-400 hover:text-white transition-colors"
             >
               <span className="text-sm font-medium">Research Links (Optional)</span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
-            </button>
+              <motion.div
+                animate={{ rotate: showAdvanced ? 90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </motion.div>
+            </motion.button>
             
-            {showAdvanced && (
-              <div className="p-3 pt-0 space-y-3 border-t border-dark-700">
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
-                  <input
-                    type="url"
-                    value={formData.aliexpress_link}
-                    onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
-                    className="input"
-                    placeholder="https://aliexpress.com/item/..."
-                    disabled={submitting}
-                  />
-                </div>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 pt-0 space-y-4 border-t border-dark-700">
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
+                      <input
+                        type="url"
+                        value={formData.aliexpress_link}
+                        onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
+                        className="input"
+                        placeholder="https://aliexpress.com/item/..."
+                        disabled={submitting}
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
-                  <input
-                    type="url"
-                    value={formData.amazon_link}
-                    onChange={(e) => setFormData({ ...formData, amazon_link: e.target.value })}
-                    className="input"
-                    placeholder="https://amazon.com/dp/..."
-                    disabled={submitting}
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
+                      <input
+                        type="url"
+                        value={formData.amazon_link}
+                        onChange={(e) => setFormData({ ...formData, amazon_link: e.target.value })}
+                        className="input"
+                        placeholder="https://amazon.com/dp/..."
+                        disabled={submitting}
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #1</label>
-                  <input
-                    type="url"
-                    value={formData.competitor_link_1}
-                    onChange={(e) => setFormData({ ...formData, competitor_link_1: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                    disabled={submitting}
-                  />
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #1</label>
+                        <input
+                          type="url"
+                          value={formData.competitor_link_1}
+                          onChange={(e) => setFormData({ ...formData, competitor_link_1: e.target.value })}
+                          className="input"
+                          placeholder="https://..."
+                          disabled={submitting}
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #2</label>
-                  <input
-                    type="url"
-                    value={formData.competitor_link_2}
-                    onChange={(e) => setFormData({ ...formData, competitor_link_2: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                    disabled={submitting}
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #2</label>
+                        <input
+                          type="url"
+                          value={formData.competitor_link_2}
+                          onChange={(e) => setFormData({ ...formData, competitor_link_2: e.target.value })}
+                          className="input"
+                          placeholder="https://..."
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
-                  <input
-                    type="text"
-                    value={formData.targetAudience}
-                    onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-                    className="input"
-                    placeholder="e.g., Women 35+"
-                    disabled={submitting}
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
+                      <input
+                        type="text"
+                        value={formData.targetAudience}
+                        onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                        className="input"
+                        placeholder="e.g., Women 35+"
+                        disabled={submitting}
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    className="input"
-                    placeholder="e.g., trending, tech, high-margin"
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
+                      <input
+                        type="text"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        className="input"
+                        placeholder="e.g., trending, tech, high-margin"
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1" disabled={submitting}>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex gap-3 pt-4"
+          >
+            <motion.button
+              type="button"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-secondary flex-1"
+              disabled={submitting}
+            >
               Cancel
-            </button>
-            <button type="submit" className="btn btn-primary flex-1" disabled={submitting}>
+            </motion.button>
+            <motion.button
+              type="submit"
+              whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.4)' }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-primary flex-1"
+              disabled={submitting}
+            >
               {submitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" />
-                  {uploadingImage ? 'Uploading image...' : 'Adding...'}
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                  {uploadingImage ? 'Uploading...' : 'Adding...'}
                 </>
               ) : (
                 <>
@@ -737,11 +1054,11 @@ function NewProductModal({ onClose, onAdd }) {
                   Add Product
                 </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </form>
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body
   )
 }
