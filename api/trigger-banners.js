@@ -45,10 +45,11 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        // Product identification
-        id: req.body.id,
+        // Product identification - workflow expects "product_id"
+        product_id: req.body.id,
         user_id: req.body.user_id,
         name: req.body.name,
+        product_name: req.body.name, // alias for compatibility
         
         // Core fields for AI research
         niche: req.body.niche || 'General',
@@ -57,11 +58,11 @@ export default async function handler(req, res) {
         gender: req.body.gender || 'All',
         target_market: req.body.target_market || req.body.country || 'US',
         
-        // Links for research
+        // Links for research - workflow expects "aliexpress_link"
         amazon_link: req.body.amazon_link || '',
+        aliexpress_link: req.body.source_url || req.body.aliexpress_link || '',
         competitor_link_1: req.body.competitor_link_1 || '',
         competitor_link_2: req.body.competitor_link_2 || '',
-        source_url: req.body.source_url || '',
         
         // Product image
         product_image_url: req.body.product_image_url || '',
