@@ -386,6 +386,7 @@ function NewProductModal({ onClose, onAdd }) {
     language: 'English',
     country: 'United States',
     gender: 'All',
+    aliexpress_link: '',
     amazon_link: '',
     competitor_link_1: '',
     competitor_link_2: '',
@@ -645,6 +646,18 @@ function NewProductModal({ onClose, onAdd }) {
             
             {showAdvanced && (
               <div className="p-3 pt-0 space-y-3 border-t border-dark-700">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
+                  <input
+                    type="url"
+                    value={formData.aliexpress_link}
+                    onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
+                    className="input"
+                    placeholder="https://aliexpress.com/item/..."
+                    disabled={submitting}
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
                   <input
