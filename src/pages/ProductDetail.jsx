@@ -21,13 +21,16 @@ import {
   Eye,
   ChevronDown,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Copy,
+  ExternalLink,
+  Link as LinkIcon
 } from 'lucide-react'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { products, STATUSES, updateProduct, updateProductStatus, deleteProduct, loading, error } = useData()
+  const { products, STATUSES, updateProduct, updateProductStatus, deleteProduct, duplicateProduct, loading, error } = useData()
   const [isEditing, setIsEditing] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
@@ -93,6 +96,17 @@ export default function ProductDetail() {
       navigate('/products')
     } catch (err) {
       console.error('Failed to delete:', err)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    try {
+      const newProduct = await duplicateProduct?.(id)
+      if (newProduct?.id) {
+        navigate(`/products/${newProduct.id}`)
+      }
+    } catch (err) {
+      console.error('Failed to duplicate:', err)
     }
   }
 
@@ -181,6 +195,10 @@ export default function ProductDetail() {
             <Edit className="w-4 h-4" />
             Edit
           </button>
+          <button onClick={handleDuplicate} className="btn btn-secondary">
+            <Copy className="w-4 h-4" />
+            Duplicate
+          </button>
           <button onClick={handleDelete} className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10">
             <Trash2 className="w-4 h-4" />
           </button>
@@ -256,21 +274,38 @@ export default function ProductDetail() {
       <div className="animate-fadeIn">
         {activeTab === 'overview' && (
           <div className="grid lg:grid-cols-2 gap-6">
+            {/* Product Details */}
             <div className="card">
               <h3 className="text-lg font-semibold text-white mb-4">Product Details</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Niche</p>
-                  <p className="text-white">{productNiche}</p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-dark-400 mb-1">Niche</p>
+                    <p className="text-white">{product?.niche || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-dark-400 mb-1">Target Audience</p>
+                    <p className="text-white">{product?.targetAudience || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Target Audience</p>
-                  <p className="text-white">{productTargetAudience}</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-dark-400 mb-1">Country</p>
+                    <p className="text-white">{product?.country || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-dark-400 mb-1">Language</p>
+                    <p className="text-white">{product?.language || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-dark-400 mb-1">Gender</p>
+                    <p className="text-white">{product?.gender || '-'}</p>
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-dark-400 mb-1">Tags</p>
                   <div className="flex flex-wrap gap-2">
-                    {productTags.length > 0 ? productTags.map((tag, i) => (
+                    {(product?.tags || []).length > 0 ? product.tags.map((tag, i) => (
                       <span key={tag || i} className="badge bg-dark-700 text-dark-200">
                         {tag}
                       </span>
@@ -282,26 +317,105 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Research Links */}
+            <div className="card">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <LinkIcon className="w-5 h-5" />
+                Research Links
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-dark-400 mb-1">Aliexpress Link</p>
+                  {product?.aliexpress_link ? (
+                    <a href={product.aliexpress_link} target="_blank" rel="noopener noreferrer" 
+                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
+                      {product.aliexpress_link.substring(0, 50)}...
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  ) : <span className="text-dark-500">-</span>}
+                </div>
+                <div>
+                  <p className="text-sm text-dark-400 mb-1">Amazon Link</p>
+                  {product?.amazon_link ? (
+                    <a href={product.amazon_link} target="_blank" rel="noopener noreferrer" 
+                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
+                      {product.amazon_link.substring(0, 50)}...
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  ) : <span className="text-dark-500">-</span>}
+                </div>
+                <div>
+                  <p className="text-sm text-dark-400 mb-1">Competitor #1</p>
+                  {product?.competitor_link_1 ? (
+                    <a href={product.competitor_link_1} target="_blank" rel="noopener noreferrer" 
+                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
+                      {product.competitor_link_1.substring(0, 50)}...
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  ) : <span className="text-dark-500">-</span>}
+                </div>
+                <div>
+                  <p className="text-sm text-dark-400 mb-1">Competitor #2</p>
+                  {product?.competitor_link_2 ? (
+                    <a href={product.competitor_link_2} target="_blank" rel="noopener noreferrer" 
+                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
+                      {product.competitor_link_2.substring(0, 50)}...
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  ) : <span className="text-dark-500">-</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* Product Image */}
+            <div className="card">
+              <h3 className="text-lg font-semibold text-white mb-4">Product Image</h3>
+              {product?.product_image_url ? (
+                <div className="space-y-2">
+                  <img 
+                    src={product.product_image_url} 
+                    alt={product.name}
+                    className="w-full max-w-xs rounded-lg border border-dark-600"
+                  />
+                  <a href={product.product_image_url} target="_blank" rel="noopener noreferrer" 
+                     className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
+                    Open full image <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              ) : (
+                <div className="text-dark-500 text-center py-8">
+                  <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No product image</p>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
             <div className="card">
               <h3 className="text-lg font-semibold text-white mb-4">Notes</h3>
               <textarea
-                value={productNotes}
+                value={product?.notes || ''}
                 onChange={(e) => updateProduct?.(id, { notes: e.target.value })}
                 className="input min-h-[150px]"
                 placeholder="Add notes about this product..."
               />
             </div>
 
+            {/* Timeline */}
             <div className="card lg:col-span-2">
               <h3 className="text-lg font-semibold text-white mb-4">Timeline</h3>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-6 text-sm">
                 <div>
                   <span className="text-dark-400">Created:</span>
-                  <span className="text-white ml-2">{formatDate(productCreatedAt)}</span>
+                  <span className="text-white ml-2">{formatDate(product?.createdAt)}</span>
                 </div>
                 <div>
                   <span className="text-dark-400">Last Updated:</span>
-                  <span className="text-white ml-2">{formatDate(productUpdatedAt)}</span>
+                  <span className="text-white ml-2">{formatDate(product?.updatedAt)}</span>
+                </div>
+                <div>
+                  <span className="text-dark-400">Product ID:</span>
+                  <span className="text-dark-300 ml-2 font-mono text-xs">{product?.id}</span>
                 </div>
               </div>
             </div>

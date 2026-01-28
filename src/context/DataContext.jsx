@@ -97,13 +97,35 @@ export function DataProvider({ children }) {
 
   const updateProduct = useCallback(async (id, updates) => {
     try {
+      // Find current product to get existing metadata
+      const currentProduct = products.find(p => p.id === id)
+      const currentMetadata = currentProduct?.metadata || {}
+      
       const dbUpdates = {}
       if (updates.name) dbUpdates.name = updates.name
-      if (updates.description) dbUpdates.description = updates.description
+      if (updates.description !== undefined) dbUpdates.description = updates.description
       if (updates.status) dbUpdates.status = updates.status
       if (updates.niche) dbUpdates.niche = updates.niche
       if (updates.market) dbUpdates.target_market = updates.market
-      if (updates.notes) dbUpdates.notes = updates.notes
+      if (updates.notes !== undefined) dbUpdates.notes = updates.notes
+      
+      // Update metadata fields
+      const metadataUpdates = {}
+      if (updates.language !== undefined) metadataUpdates.language = updates.language
+      if (updates.country !== undefined) metadataUpdates.country = updates.country
+      if (updates.gender !== undefined) metadataUpdates.gender = updates.gender
+      if (updates.targetAudience !== undefined) metadataUpdates.targetAudience = updates.targetAudience
+      if (updates.aliexpress_link !== undefined) metadataUpdates.aliexpress_link = updates.aliexpress_link
+      if (updates.amazon_link !== undefined) metadataUpdates.amazon_link = updates.amazon_link
+      if (updates.competitor_link_1 !== undefined) metadataUpdates.competitor_link_1 = updates.competitor_link_1
+      if (updates.competitor_link_2 !== undefined) metadataUpdates.competitor_link_2 = updates.competitor_link_2
+      if (updates.product_image_url !== undefined) metadataUpdates.product_image_url = updates.product_image_url
+      if (updates.tags !== undefined) metadataUpdates.tags = updates.tags
+      
+      // Merge with existing metadata if there are updates
+      if (Object.keys(metadataUpdates).length > 0) {
+        dbUpdates.metadata = { ...currentMetadata, ...metadataUpdates }
+      }
       
       const updated = await db.products.update(id, dbUpdates)
       const formattedProduct = formatProduct(updated)
@@ -114,7 +136,7 @@ export function DataProvider({ children }) {
       console.error('Error updating product:', err)
       throw err
     }
-  }, [])
+  }, [products])
 
   const deleteProduct = useCallback(async (id) => {
     try {
@@ -125,6 +147,46 @@ export function DataProvider({ children }) {
       throw err
     }
   }, [])
+
+  // Duplicate a product (creates new with fresh ID)
+  const duplicateProduct = useCallback(async (id) => {
+    if (!user) throw new Error('Must be logged in')
+    
+    try {
+      // Find the product to duplicate
+      const productToDuplicate = products.find(p => p.id === id)
+      if (!productToDuplicate) throw new Error('Product not found')
+      
+      // Create new product with same data but new ID
+      const newProduct = await db.products.create({
+        user_id: user.id,
+        name: `${productToDuplicate.name} (Copy)`,
+        description: productToDuplicate.description || '',
+        status: 'new', // Reset status for duplicated product
+        niche: productToDuplicate.niche || '',
+        target_market: productToDuplicate.market || 'US',
+        metadata: {
+          targetAudience: productToDuplicate.targetAudience || '',
+          tags: productToDuplicate.tags || [],
+          language: productToDuplicate.language || 'English',
+          country: productToDuplicate.country || 'United States',
+          gender: productToDuplicate.gender || 'All',
+          aliexpress_link: productToDuplicate.aliexpress_link || '',
+          amazon_link: productToDuplicate.amazon_link || '',
+          competitor_link_1: productToDuplicate.competitor_link_1 || '',
+          competitor_link_2: productToDuplicate.competitor_link_2 || '',
+          product_image_url: productToDuplicate.product_image_url || '',
+        }
+      })
+      
+      const formattedProduct = formatProduct(newProduct)
+      setProducts(prev => [formattedProduct, ...prev])
+      return formattedProduct
+    } catch (err) {
+      console.error('Error duplicating product:', err)
+      throw err
+    }
+  }, [user, products])
 
   const updateProductStatus = useCallback(async (id, newStatus) => {
     try {
@@ -300,6 +362,7 @@ export function DataProvider({ children }) {
     addProduct,
     updateProduct,
     deleteProduct,
+    duplicateProduct,
     updateProductStatus,
     getProductsByStatus,
     
