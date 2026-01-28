@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import {
@@ -304,9 +305,10 @@ function NewProductModal({ onClose, onAdd }) {
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+  // Use createPortal to render at document.body level (avoids transform stacking context issues)
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fadeIn">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Add New Product</h2>
@@ -413,6 +415,7 @@ function NewProductModal({ onClose, onAdd }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
