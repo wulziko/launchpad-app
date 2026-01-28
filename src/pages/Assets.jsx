@@ -1,66 +1,118 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
+import { PageLoading } from '../components/LoadingSpinner'
+import EmptyState from '../components/EmptyState'
 import {
   Image,
   FileText,
   Download,
   Eye,
-  Filter,
   Search,
   Grid3X3,
   List,
-  MoreVertical,
-  Trash2,
-  ExternalLink,
-  FolderOpen
+  FolderOpen,
+  AlertCircle
 } from 'lucide-react'
 
 export default function Assets() {
-  const { products } = useData()
+  const { products, assets, loading, error } = useData()
   const [view, setView] = useState('grid')
-  const [filter, setFilter] = useState('all') // 'all', 'banners', 'landing'
+  const [filter, setFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Collect all assets from all products
-  const allAssets = products.flatMap(product => {
-    const assets = []
-    
-    // Add banners
-    product.banners.forEach(banner => {
-      assets.push({
-        id: banner.id,
-        type: 'banner',
-        url: banner.url,
-        productId: product.id,
-        productName: product.name,
-        status: banner.status,
-        createdAt: product.createdAt,
-      })
+  // Safe arrays
+  const safeProducts = products || []
+  const safeAssets = assets || []
+
+  // Collect all assets from products + standalone assets
+  const allAssets = [
+    // Assets from the assets table
+    ...safeAssets.map(asset => ({
+      id: asset?.id,
+      type: asset?.type || 'other',
+      url: asset?.file_url || asset?.url,
+      name: asset?.name || 'Unnamed',
+      productId: asset?.product_id,
+      productName: safeProducts.find(p => p?.id === asset?.product_id)?.name || 'Unknown',
+      status: asset?.metadata?.status || 'ready',
+      createdAt: asset?.created_at,
+    })),
+    // Legacy: assets embedded in products
+    ...safeProducts.flatMap(product => {
+      if (!product) return []
+      const assets = []
+      
+      // Add banners
+      if (product.banners && Array.isArray(product.banners)) {
+        product.banners.forEach(banner => {
+          if (!banner) return
+          assets.push({
+            id: banner.id || `banner-${Math.random()}`,
+            type: 'banner',
+            url: banner.url,
+            name: 'Banner',
+            productId: product.id,
+            productName: product.name || 'Unknown',
+            status: banner.status || 'ready',
+            createdAt: product.createdAt,
+          })
+        })
+      }
+      
+      // Add landing page if exists
+      if (product.landingPage?.html) {
+        assets.push({
+          id: `lp-${product.id}`,
+          type: 'landing_page',
+          name: 'Landing Page',
+          productId: product.id,
+          productName: product.name || 'Unknown',
+          status: product.landingPage.status || 'ready',
+          createdAt: product.updatedAt,
+        })
+      }
+      
+      return assets
     })
-    
-    // Add landing page if exists
-    if (product.landingPage.html) {
-      assets.push({
-        id: `lp-${product.id}`,
-        type: 'landing',
-        productId: product.id,
-        productName: product.name,
-        status: product.landingPage.status,
-        createdAt: product.updatedAt,
-      })
-    }
-    
-    return assets
-  })
+  ].filter(Boolean) // Remove any null/undefined entries
 
   const filteredAssets = allAssets.filter(asset => {
-    if (filter !== 'all' && filter !== asset.type + 's') return false
-    if (searchQuery && !asset.productName.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    if (!asset) return false
+    if (filter !== 'all') {
+      const assetType = asset.type?.toLowerCase() || ''
+      if (filter === 'banners' && assetType !== 'banner') return false
+      if (filter === 'landing' && !assetType.includes('landing')) return false
+    }
+    if (searchQuery) {
+      const productName = asset.productName?.toLowerCase() || ''
+      const assetName = asset.name?.toLowerCase() || ''
+      const query = searchQuery.toLowerCase()
+      if (!productName.includes(query) && !assetName.includes(query)) return false
+    }
     return true
   })
 
-  const bannerCount = allAssets.filter(a => a.type === 'banner').length
-  const landingCount = allAssets.filter(a => a.type === 'landing').length
+  const bannerCount = allAssets.filter(a => a?.type === 'banner').length
+  const landingCount = allAssets.filter(a => a?.type?.includes('landing')).length
+
+  // Loading state
+  if (loading) {
+    return <PageLoading message="Loading assets..." />
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Failed to load assets</h2>
+        <p className="text-dark-400 mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
+          Try Again
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -117,7 +169,7 @@ export default function Assets() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
           <input
             type="text"
-            placeholder="Search by product name..."
+            placeholder="Search by product or asset name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-10"
@@ -167,22 +219,25 @@ export default function Assets() {
         </div>
       </div>
 
-      {/* Assets Display */}
-      {filteredAssets.length === 0 ? (
+      {/* Empty state */}
+      {allAssets.length === 0 ? (
+        <EmptyState
+          type="assets"
+          title="No assets yet"
+          description="Generate banners and landing pages from your products to see them here."
+        />
+      ) : filteredAssets.length === 0 ? (
         <div className="card text-center py-16">
           <FolderOpen className="w-16 h-16 mx-auto mb-4 text-dark-600" />
           <h3 className="text-lg font-medium text-white mb-2">No assets found</h3>
           <p className="text-dark-400">
-            {filter !== 'all' 
-              ? `No ${filter} match your search.`
-              : 'Generate banners and landing pages from your products to see them here.'
-            }
+            No {filter !== 'all' ? filter : 'assets'} match your search.
           </p>
         </div>
       ) : view === 'grid' ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredAssets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} />
+            <AssetCard key={asset?.id || Math.random()} asset={asset} />
           ))}
         </div>
       ) : (
@@ -198,57 +253,63 @@ export default function Assets() {
               </tr>
             </thead>
             <tbody>
-              {filteredAssets.map((asset) => (
-                <tr key={asset.id} className="border-b border-dark-800 last:border-0 hover:bg-dark-800/50">
-                  <td className="py-3 pl-4">
-                    <div className="flex items-center gap-3">
-                      {asset.type === 'banner' ? (
-                        <img
-                          src={asset.url}
-                          alt="Banner"
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-dark-700 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-dark-400" />
-                        </div>
-                      )}
-                      <span className="text-white font-medium">
-                        {asset.type === 'banner' ? 'Banner' : 'Landing Page'}
+              {filteredAssets.map((asset) => {
+                if (!asset) return null
+                const isBanner = asset.type === 'banner'
+                return (
+                  <tr key={asset.id} className="border-b border-dark-800 last:border-0 hover:bg-dark-800/50">
+                    <td className="py-3 pl-4">
+                      <div className="flex items-center gap-3">
+                        {isBanner && asset.url ? (
+                          <img
+                            src={asset.url}
+                            alt="Banner"
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-dark-700 flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-dark-400" />
+                          </div>
+                        )}
+                        <span className="text-white font-medium">
+                          {asset.name || (isBanner ? 'Banner' : 'Landing Page')}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 text-dark-300">{asset.productName || '-'}</td>
+                    <td className="py-3">
+                      <span className={`badge ${
+                        isBanner 
+                          ? 'bg-primary-500/10 text-primary-400' 
+                          : 'bg-green-500/10 text-green-400'
+                      }`}>
+                        {isBanner ? 'Banner' : 'Landing'}
                       </span>
-                    </div>
-                  </td>
-                  <td className="py-3 text-dark-300">{asset.productName}</td>
-                  <td className="py-3">
-                    <span className={`badge ${
-                      asset.type === 'banner' 
-                        ? 'bg-primary-500/10 text-primary-400' 
-                        : 'bg-green-500/10 text-green-400'
-                    }`}>
-                      {asset.type === 'banner' ? 'Banner' : 'Landing'}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <span className={`badge ${
-                      asset.status === 'ready' 
-                        ? 'bg-green-500/10 text-green-400' 
-                        : 'bg-yellow-500/10 text-yellow-400'
-                    }`}>
-                      {asset.status}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button className="btn btn-ghost p-2">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="btn btn-ghost p-2">
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3">
+                      <span className={`badge ${
+                        asset.status === 'ready' 
+                          ? 'bg-green-500/10 text-green-400' 
+                          : 'bg-yellow-500/10 text-yellow-400'
+                      }`}>
+                        {asset.status || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <div className="flex items-center gap-1 justify-end">
+                        <button className="btn btn-ghost p-2" title="Preview">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {asset.url && (
+                          <button className="btn btn-ghost p-2" title="Download">
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -258,16 +319,18 @@ export default function Assets() {
 }
 
 function AssetCard({ asset }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+  if (!asset) return null
+  
+  const isBanner = asset.type === 'banner'
 
   return (
     <div className="card p-0 overflow-hidden group">
       {/* Preview */}
       <div className="relative aspect-square bg-dark-800">
-        {asset.type === 'banner' ? (
+        {isBanner && asset.url ? (
           <img
             src={asset.url}
-            alt="Banner"
+            alt={asset.name || 'Banner'}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -278,22 +341,24 @@ function AssetCard({ asset }) {
 
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <button className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors">
+          <button className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors" title="Preview">
             <Eye className="w-5 h-5 text-white" />
           </button>
-          <button className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors">
-            <Download className="w-5 h-5 text-white" />
-          </button>
+          {asset.url && (
+            <button className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors" title="Download">
+              <Download className="w-5 h-5 text-white" />
+            </button>
+          )}
         </div>
 
         {/* Type Badge */}
         <div className="absolute top-2 left-2">
           <span className={`badge ${
-            asset.type === 'banner' 
+            isBanner 
               ? 'bg-primary-500/90 text-white' 
               : 'bg-green-500/90 text-white'
           }`}>
-            {asset.type === 'banner' ? (
+            {isBanner ? (
               <><Image className="w-3 h-3 mr-1" /> Banner</>
             ) : (
               <><FileText className="w-3 h-3 mr-1" /> Landing</>
@@ -304,10 +369,10 @@ function AssetCard({ asset }) {
 
       {/* Info */}
       <div className="p-4">
-        <p className="font-medium text-white truncate">{asset.productName}</p>
+        <p className="font-medium text-white truncate">{asset.productName || 'Unknown'}</p>
         <p className="text-sm text-dark-400 mt-1">
           Status: <span className={asset.status === 'ready' ? 'text-green-400' : 'text-yellow-400'}>
-            {asset.status}
+            {asset.status || 'Unknown'}
           </span>
         </p>
       </div>
