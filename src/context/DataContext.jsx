@@ -268,6 +268,19 @@ export function DataProvider({ children }) {
     product_image_url: dbProduct.metadata?.product_image_url || '',
     createdAt: dbProduct.created_at,
     updatedAt: dbProduct.updated_at,
+    
+    // Automation status (from metadata)
+    automationStatus: dbProduct.metadata?.automation_status || 'idle',
+    automationProgress: dbProduct.metadata?.automation_progress || 0,
+    automationMessage: dbProduct.metadata?.automation_message || '',
+    
+    // External IDs for 3rd party integrations
+    // Example: { meta_ad_id: '123', shopify_product_id: '456', clickup_task_id: '789' }
+    external_ids: dbProduct.metadata?.external_ids || {},
+    
+    // Pass through full metadata for access to other fields
+    metadata: dbProduct.metadata || {},
+    
     // These will be populated from assets
     banners: [],
     landingPage: { html: '', status: 'pending' },
