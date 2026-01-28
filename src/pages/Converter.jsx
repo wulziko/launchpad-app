@@ -82,11 +82,11 @@ export default function Converter() {
   }
 
   const downloadFile = () => {
-    const blob = new Blob([outputJson], { type: 'application/json' })
+    const blob = new Blob([outputJson], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'gempages-import.json'
+    a.download = 'advertorial.gempages'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -200,7 +200,7 @@ export default function Converter() {
                 </button>
                 <button onClick={downloadFile} className="btn btn-primary text-sm py-1.5">
                   <Download className="w-4 h-4" />
-                  Download JSON
+                  Download .gempages
                 </button>
               </div>
             )}
@@ -225,12 +225,12 @@ export default function Converter() {
       <div className="card bg-dark-800/50">
         <h3 className="font-semibold text-white mb-3">How to import into GemPages:</h3>
         <ol className="space-y-3 text-sm text-dark-300 list-decimal list-inside">
-          <li>Click <strong className="text-white">"Download JSON"</strong> above after conversion</li>
+          <li>Click <strong className="text-white">"Download .gempages"</strong> above after conversion</li>
           <li>Open <strong className="text-white">GemPages Editor</strong> in your Shopify store</li>
           <li>Create a new page or open an existing one</li>
           <li>Click the <strong className="text-white">⚙️ Settings icon</strong> (top right)</li>
           <li>Select <strong className="text-white">"Import"</strong> → <strong className="text-white">"From file"</strong></li>
-          <li>Upload the downloaded JSON file</li>
+          <li>Upload the downloaded <code className="text-primary-400">.gempages</code> file</li>
           <li>Done! Your advertorial is now a native GemPages page 🎉</li>
         </ol>
       </div>
