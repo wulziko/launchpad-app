@@ -41,6 +41,7 @@ export const triggerBannerGeneration = async (product) => {
       target_audience: product.targetAudience || product.metadata?.targetAudience || '',
       
       // Research links
+      aliexpress_link: product.aliexpress_link || product.metadata?.aliexpress_link || '',
       amazon_link: product.amazon_link || product.metadata?.amazon_link || '',
       competitor_link_1: product.competitor_link_1 || product.metadata?.competitor_link_1 || '',
       competitor_link_2: product.competitor_link_2 || product.metadata?.competitor_link_2 || '',

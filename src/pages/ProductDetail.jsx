@@ -451,6 +451,7 @@ function EditProductModal({ product, onClose, onSave }) {
     language: product?.language || 'English',
     country: product?.country || 'United States',
     gender: product?.gender || 'All',
+    aliexpress_link: product?.aliexpress_link || '',
     amazon_link: product?.amazon_link || '',
     competitor_link_1: product?.competitor_link_1 || '',
     competitor_link_2: product?.competitor_link_2 || '',
@@ -484,6 +485,7 @@ function EditProductModal({ product, onClose, onSave }) {
         language: formData.language,
         country: formData.country,
         gender: formData.gender,
+        aliexpress_link: formData.aliexpress_link.trim(),
         amazon_link: formData.amazon_link.trim(),
         competitor_link_1: formData.competitor_link_1.trim(),
         competitor_link_2: formData.competitor_link_2.trim(),
@@ -649,6 +651,18 @@ function EditProductModal({ product, onClose, onSave }) {
             
             {showAdvanced && (
               <div className="p-3 pt-0 space-y-3 border-t border-dark-700">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
+                  <input
+                    type="url"
+                    value={formData.aliexpress_link}
+                    onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
+                    className="input"
+                    placeholder="https://aliexpress.com/item/..."
+                    disabled={submitting}
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
                   <input
