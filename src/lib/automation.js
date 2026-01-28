@@ -23,25 +23,26 @@ export const triggerBannerGeneration = async (product) => {
       automation_message: 'Starting banner generation...'
     })
 
-    // Prepare payload for n8n
-    // Product ID is the universal connector - can be used to link with any 3rd party
+    // Prepare payload for n8n webhook
+    // Matches the expected format in /api/trigger-banners.js
     const payload = {
-      // Universal Product ID - links to all external systems
-      product_id: product.id,
+      // Required identifiers
+      id: product.id,
+      user_id: product.user_id,
+      name: product.name,
       
       // Core product info
-      name: product.name,
       description: product.description || '',
       niche: product.niche || '',
       
-      // Localization
+      // Localization - match LaunchPad database schema
       language: product.language || product.metadata?.language || 'English',
-      country: product.country || product.metadata?.country || 'United States',
+      country: product.country || product.metadata?.country || 'US',
       gender: product.gender || product.metadata?.gender || 'All',
-      target_audience: product.targetAudience || product.metadata?.targetAudience || '',
+      target_market: product.target_market || product.country || 'US',
       
-      // Research links
-      aliexpress_link: product.aliexpress_link || product.metadata?.aliexpress_link || '',
+      // Research links - match LaunchPad database field names
+      source_url: product.source_url || product.supplier_url || product.metadata?.aliexpress_link || '',
       amazon_link: product.amazon_link || product.metadata?.amazon_link || '',
       competitor_link_1: product.competitor_link_1 || product.metadata?.competitor_link_1 || '',
       competitor_link_2: product.competitor_link_2 || product.metadata?.competitor_link_2 || '',
@@ -49,12 +50,8 @@ export const triggerBannerGeneration = async (product) => {
       // Product image for banner generation
       product_image_url: product.product_image_url || product.metadata?.product_image_url || '',
       
-      // External IDs for 3rd party integrations (future-proofing)
-      external_ids: product.external_ids || product.metadata?.external_ids || {},
-      
-      // Supabase config for n8n to update progress
-      supabase_url: import.meta.env.VITE_SUPABASE_URL,
-      supabase_project_ref: 'rxtcssesqwooggydfkvs',
+      // Status
+      status: product.status || 'new'
     }
 
     // Trigger banner generation via API proxy (avoids CORS)
