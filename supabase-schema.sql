@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS products (
   supplier_url TEXT,
   notes TEXT,
   metadata JSONB DEFAULT '{}',
+  -- n8n workflow integration fields
+  language VARCHAR(50) DEFAULT 'English',
+  country VARCHAR(100),
+  amazon_link TEXT,
+  competitor_link_1 TEXT,
+  competitor_link_2 TEXT,
+  gender VARCHAR(20) DEFAULT 'All',
+  product_image_url TEXT,
+  -- timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

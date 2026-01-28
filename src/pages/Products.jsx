@@ -378,9 +378,18 @@ function NewProductModal({ onClose, onAdd }) {
     targetAudience: '',
     price: '',
     tags: '',
+    // n8n workflow fields
+    language: 'English',
+    country: 'United States',
+    gender: 'All',
+    amazon_link: '',
+    competitor_link_1: '',
+    competitor_link_2: '',
+    product_image_url: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -415,7 +424,7 @@ function NewProductModal({ onClose, onAdd }) {
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fadeIn">
+      <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Add New Product</h2>
           <button onClick={onClose} className="text-dark-400 hover:text-white" disabled={submitting}>
@@ -449,7 +458,7 @@ function NewProductModal({ onClose, onAdd }) {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input min-h-[100px]"
+              className="input min-h-[80px]"
               placeholder="Brief description of the product..."
               disabled={submitting}
             />
@@ -457,17 +466,24 @@ function NewProductModal({ onClose, onAdd }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Market</label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Niche *</label>
               <select
-                value={formData.market}
-                onChange={(e) => setFormData({ ...formData, market: e.target.value })}
+                value={formData.niche}
+                onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
                 className="input"
                 disabled={submitting}
               >
-                <option value="US">🇺🇸 United States</option>
-                <option value="Israel">🇮🇱 Israel</option>
-                <option value="UK">🇬🇧 United Kingdom</option>
-                <option value="EU">🇪🇺 Europe</option>
+                <option value="">Select niche...</option>
+                <option value="Beauty & Skincare">Beauty & Skincare</option>
+                <option value="Health & Wellness">Health & Wellness</option>
+                <option value="Fitness">Fitness</option>
+                <option value="Home & Garden">Home & Garden</option>
+                <option value="Tech & Gadgets">Tech & Gadgets</option>
+                <option value="Fashion">Fashion</option>
+                <option value="Pet Supplies">Pet Supplies</option>
+                <option value="Baby & Kids">Baby & Kids</option>
+                <option value="Kitchen">Kitchen</option>
+                <option value="Other">Other</option>
               </select>
             </div>
 
@@ -486,40 +502,143 @@ function NewProductModal({ onClose, onAdd }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Niche</label>
-            <input
-              type="text"
-              value={formData.niche}
-              onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
-              className="input"
-              placeholder="e.g., Health & Wellness"
-              disabled={submitting}
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Country</label>
+              <select
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="input"
+                disabled={submitting}
+              >
+                <option value="United States">🇺🇸 United States</option>
+                <option value="Israel">🇮🇱 Israel</option>
+                <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                <option value="Germany">🇩🇪 Germany</option>
+                <option value="France">🇫🇷 France</option>
+                <option value="Australia">🇦🇺 Australia</option>
+                <option value="Canada">🇨🇦 Canada</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Language</label>
+              <select
+                value={formData.language}
+                onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                className="input"
+                disabled={submitting}
+              >
+                <option value="English">English</option>
+                <option value="Hebrew">Hebrew</option>
+                <option value="Spanish">Spanish</option>
+                <option value="German">German</option>
+                <option value="French">French</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Target Gender</label>
+              <select
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                className="input"
+                disabled={submitting}
+              >
+                <option value="All">All</option>
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+              </select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Product Image URL</label>
             <input
-              type="text"
-              value={formData.targetAudience}
-              onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+              type="url"
+              value={formData.product_image_url}
+              onChange={(e) => setFormData({ ...formData, product_image_url: e.target.value })}
               className="input"
-              placeholder="e.g., Women 35+"
+              placeholder="https://example.com/product-image.jpg"
               disabled={submitting}
             />
+            <p className="text-xs text-dark-500 mt-1">Used for banner generation</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              className="input"
-              placeholder="e.g., trending, tech, high-margin"
-              disabled={submitting}
-            />
+          {/* Collapsible Advanced Section */}
+          <div className="border border-dark-700 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between p-3 text-left text-dark-300 hover:text-white transition-colors"
+            >
+              <span className="text-sm font-medium">Research Links (Optional)</span>
+              <ChevronRight className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
+            </button>
+            
+            {showAdvanced && (
+              <div className="p-3 pt-0 space-y-3 border-t border-dark-700">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
+                  <input
+                    type="url"
+                    value={formData.amazon_link}
+                    onChange={(e) => setFormData({ ...formData, amazon_link: e.target.value })}
+                    className="input"
+                    placeholder="https://amazon.com/dp/..."
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #1</label>
+                  <input
+                    type="url"
+                    value={formData.competitor_link_1}
+                    onChange={(e) => setFormData({ ...formData, competitor_link_1: e.target.value })}
+                    className="input"
+                    placeholder="https://..."
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #2</label>
+                  <input
+                    type="url"
+                    value={formData.competitor_link_2}
+                    onChange={(e) => setFormData({ ...formData, competitor_link_2: e.target.value })}
+                    className="input"
+                    placeholder="https://..."
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
+                  <input
+                    type="text"
+                    value={formData.targetAudience}
+                    onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                    className="input"
+                    placeholder="e.g., Women 35+"
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    className="input"
+                    placeholder="e.g., trending, tech, high-margin"
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
