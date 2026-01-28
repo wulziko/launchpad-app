@@ -1,11 +1,13 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { supabase, db } from '../lib/supabase'
+import { useAuth } from './AuthContext'
 
 const DataContext = createContext(null)
 
 // Status workflow
 export const STATUSES = [
   { id: 'new', label: 'New', color: 'bg-dark-600', textColor: 'text-dark-300' },
-  { id: 'banner_generation', label: 'Banner Generation', color: 'bg-blue-600', textColor: 'text-blue-100' },
+  { id: 'banner_gen', label: 'Banner Generation', color: 'bg-blue-600', textColor: 'text-blue-100' },
   { id: 'landing_page', label: 'Landing Page', color: 'bg-purple-600', textColor: 'text-purple-100' },
   { id: 'review', label: 'Review', color: 'bg-yellow-600', textColor: 'text-yellow-100' },
   { id: 'ready', label: 'Ready to Launch', color: 'bg-green-600', textColor: 'text-green-100' },
@@ -13,242 +15,286 @@ export const STATUSES = [
   { id: 'paused', label: 'Paused', color: 'bg-orange-600', textColor: 'text-orange-100' },
 ]
 
-// Sample products for demo
-const SAMPLE_PRODUCTS = [
-  {
-    id: '1',
-    name: 'PDRN Salmon DNA Mask',
-    description: 'Korean regenerative skincare mask with salmon DNA for anti-aging',
-    status: 'live',
-    market: 'US',
-    niche: 'Skincare',
-    targetAudience: 'Women 35+',
-    price: 49.99,
-    createdAt: '2026-01-25T10:00:00Z',
-    updatedAt: '2026-01-28T12:00:00Z',
-    images: [],
-    banners: [
-      { id: 'b1', url: 'https://placehold.co/1080x1080/ec4899/white?text=Banner+1', status: 'ready' },
-      { id: 'b2', url: 'https://placehold.co/1080x1080/db2777/white?text=Banner+2', status: 'ready' },
-      { id: 'b3', url: 'https://placehold.co/1080x1080/be185d/white?text=Banner+3', status: 'ready' },
-    ],
-    landingPage: { html: '', status: 'ready' },
-    notes: 'Top performer, scaling aggressively',
-    tags: ['trending', 'high-margin'],
-  },
-  {
-    id: '2',
-    name: 'Smart Posture Corrector',
-    description: 'AI-powered posture correction device with vibration alerts',
-    status: 'banner_generation',
-    market: 'US',
-    niche: 'Health & Wellness',
-    targetAudience: 'Office workers 25-45',
-    price: 39.99,
-    createdAt: '2026-01-27T08:00:00Z',
-    updatedAt: '2026-01-28T10:00:00Z',
-    images: [],
-    banners: [],
-    landingPage: { html: '', status: 'pending' },
-    notes: 'Testing market demand',
-    tags: ['new', 'tech'],
-  },
-  {
-    id: '3',
-    name: 'Portable Blender Pro',
-    description: 'USB-C rechargeable personal blender with powerful motor',
-    status: 'landing_page',
-    market: 'Israel',
-    niche: 'Kitchen',
-    targetAudience: 'Health-conscious adults',
-    price: 29.99,
-    createdAt: '2026-01-26T14:00:00Z',
-    updatedAt: '2026-01-28T08:00:00Z',
-    images: [],
-    banners: [
-      { id: 'b4', url: 'https://placehold.co/1080x1080/3b82f6/white?text=Blender+1', status: 'ready' },
-    ],
-    landingPage: { html: '', status: 'generating' },
-    notes: '',
-    tags: ['kitchen', 'portable'],
-  },
-  {
-    id: '4',
-    name: 'LED Therapy Mask',
-    description: '7-color LED facial mask for skin rejuvenation',
-    status: 'review',
-    market: 'US',
-    niche: 'Beauty Tech',
-    targetAudience: 'Women 28-50',
-    price: 89.99,
-    createdAt: '2026-01-24T09:00:00Z',
-    updatedAt: '2026-01-27T15:00:00Z',
-    images: [],
-    banners: [
-      { id: 'b5', url: 'https://placehold.co/1080x1080/8b5cf6/white?text=LED+1', status: 'ready' },
-      { id: 'b6', url: 'https://placehold.co/1080x1080/7c3aed/white?text=LED+2', status: 'ready' },
-    ],
-    landingPage: { html: '<html>...</html>', status: 'ready' },
-    notes: 'Need to review landing page copy',
-    tags: ['beauty', 'tech'],
-  },
-  {
-    id: '5',
-    name: 'Magnetic Phone Mount',
-    description: 'MagSafe compatible car phone mount with fast charging',
-    status: 'new',
-    market: 'US',
-    niche: 'Car Accessories',
-    targetAudience: 'iPhone users',
-    price: 24.99,
-    createdAt: '2026-01-28T07:00:00Z',
-    updatedAt: '2026-01-28T07:00:00Z',
-    images: [],
-    banners: [],
-    landingPage: { html: '', status: 'pending' },
-    notes: 'Discovered from daily product research',
-    tags: ['new', 'car'],
-  },
-]
-
-// Sample automations
-const SAMPLE_AUTOMATIONS = [
-  {
-    id: 'auto1',
-    name: 'Product Discovery',
-    description: 'Daily scan for trending products across platforms',
-    trigger: 'schedule',
-    schedule: '7:00 AM daily',
-    status: 'active',
-    lastRun: '2026-01-28T07:00:00Z',
-    runsToday: 1,
-    webhook: 'https://n8n.example.com/webhook/product-discovery',
-  },
-  {
-    id: 'auto2',
-    name: 'Banner Generation',
-    description: 'Generate 10 banner variations for Meta ads',
-    trigger: 'status_change',
-    triggerStatus: 'banner_generation',
-    status: 'active',
-    lastRun: '2026-01-28T10:15:00Z',
-    runsToday: 3,
-    webhook: 'https://n8n.example.com/webhook/banner-gen',
-  },
-  {
-    id: 'auto3',
-    name: 'Landing Page Generation',
-    description: 'Create advertorial landing page with AI',
-    trigger: 'status_change',
-    triggerStatus: 'landing_page',
-    status: 'active',
-    lastRun: '2026-01-28T08:30:00Z',
-    runsToday: 2,
-    webhook: 'https://n8n.example.com/webhook/landing-page',
-  },
-  {
-    id: 'auto4',
-    name: 'GemPages Converter',
-    description: 'Convert HTML to GemPages-ready format',
-    trigger: 'manual',
-    status: 'active',
-    lastRun: '2026-01-28T12:45:00Z',
-    runsToday: 5,
-    webhook: 'https://n8n.example.com/webhook/gempages-convert',
-  },
-]
-
 export function DataProvider({ children }) {
+  const { user, isAuthenticated } = useAuth()
   const [products, setProducts] = useState([])
   const [automations, setAutomations] = useState([])
+  const [assets, setAssets] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
+  // Fetch all data when user is authenticated
   useEffect(() => {
-    // Load from localStorage or use sample data
-    const savedProducts = localStorage.getItem('launchpad_products')
-    const savedAutomations = localStorage.getItem('launchpad_automations')
+    if (isAuthenticated && user) {
+      fetchAllData()
+    } else {
+      // Clear data when logged out
+      setProducts([])
+      setAutomations([])
+      setAssets([])
+      setLoading(false)
+    }
+  }, [isAuthenticated, user])
+
+  const fetchAllData = async () => {
+    setLoading(true)
+    setError(null)
     
-    setProducts(savedProducts ? JSON.parse(savedProducts) : SAMPLE_PRODUCTS)
-    setAutomations(savedAutomations ? JSON.parse(savedAutomations) : SAMPLE_AUTOMATIONS)
-    setLoading(false)
+    try {
+      // Fetch products, automations, and assets in parallel
+      const [productsData, automationsData, assetsData] = await Promise.all([
+        db.products.getAll(),
+        db.automations.getAll(),
+        db.assets.getAll(),
+      ])
+      
+      setProducts(productsData || [])
+      setAutomations(automationsData || [])
+      setAssets(assetsData || [])
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Products CRUD
+  const addProduct = useCallback(async (productData) => {
+    if (!user) throw new Error('Must be logged in')
+    
+    try {
+      const newProduct = await db.products.create({
+        user_id: user.id,
+        name: productData.name,
+        description: productData.description || '',
+        status: 'new',
+        niche: productData.niche || '',
+        target_market: productData.market || 'US',
+        price: parseFloat(productData.price) || 0,
+        metadata: {
+          targetAudience: productData.targetAudience || '',
+          tags: productData.tags || [],
+        }
+      })
+      
+      // Transform to frontend format
+      const formattedProduct = formatProduct(newProduct)
+      setProducts(prev => [formattedProduct, ...prev])
+      return formattedProduct
+    } catch (err) {
+      console.error('Error adding product:', err)
+      throw err
+    }
+  }, [user])
+
+  const updateProduct = useCallback(async (id, updates) => {
+    try {
+      const dbUpdates = {}
+      if (updates.name) dbUpdates.name = updates.name
+      if (updates.description) dbUpdates.description = updates.description
+      if (updates.status) dbUpdates.status = updates.status
+      if (updates.niche) dbUpdates.niche = updates.niche
+      if (updates.market) dbUpdates.target_market = updates.market
+      if (updates.price) dbUpdates.price = parseFloat(updates.price)
+      if (updates.notes) dbUpdates.notes = updates.notes
+      
+      const updated = await db.products.update(id, dbUpdates)
+      const formattedProduct = formatProduct(updated)
+      
+      setProducts(prev => prev.map(p => p.id === id ? formattedProduct : p))
+      return formattedProduct
+    } catch (err) {
+      console.error('Error updating product:', err)
+      throw err
+    }
   }, [])
 
-  // Save to localStorage when data changes
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('launchpad_products', JSON.stringify(products))
+  const deleteProduct = useCallback(async (id) => {
+    try {
+      await db.products.delete(id)
+      setProducts(prev => prev.filter(p => p.id !== id))
+    } catch (err) {
+      console.error('Error deleting product:', err)
+      throw err
     }
-  }, [products, loading])
+  }, [])
 
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('launchpad_automations', JSON.stringify(automations))
+  const updateProductStatus = useCallback(async (id, newStatus) => {
+    try {
+      const updated = await db.products.updateStatus(id, newStatus)
+      const formattedProduct = formatProduct(updated)
+      
+      setProducts(prev => prev.map(p => p.id === id ? formattedProduct : p))
+      
+      // Trigger webhook for status-based automations
+      const automation = automations.find(a => 
+        a.trigger_type === 'status_change' && 
+        a.trigger_config?.status === newStatus &&
+        a.is_active
+      )
+      
+      if (automation?.webhook_url) {
+        console.log(`Triggering automation: ${automation.name}`)
+        // TODO: Call webhook
+      }
+      
+      return formattedProduct
+    } catch (err) {
+      console.error('Error updating status:', err)
+      throw err
     }
-  }, [automations, loading])
+  }, [automations])
 
-  const addProduct = (product) => {
-    const newProduct = {
-      ...product,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'new',
-      banners: [],
-      landingPage: { html: '', status: 'pending' },
-      tags: product.tags || [],
+  // Automations CRUD
+  const addAutomation = useCallback(async (automationData) => {
+    if (!user) throw new Error('Must be logged in')
+    
+    try {
+      const newAutomation = await db.automations.create({
+        user_id: user.id,
+        name: automationData.name,
+        description: automationData.description || '',
+        type: automationData.type || 'n8n',
+        trigger_type: automationData.triggerType || 'manual',
+        trigger_config: automationData.triggerConfig || {},
+        webhook_url: automationData.webhookUrl || '',
+        is_active: true,
+      })
+      
+      setAutomations(prev => [newAutomation, ...prev])
+      return newAutomation
+    } catch (err) {
+      console.error('Error adding automation:', err)
+      throw err
     }
-    setProducts(prev => [newProduct, ...prev])
-    return newProduct
-  }
+  }, [user])
 
-  const updateProduct = (id, updates) => {
-    setProducts(prev => prev.map(p => 
-      p.id === id 
-        ? { ...p, ...updates, updatedAt: new Date().toISOString() }
-        : p
-    ))
-  }
-
-  const deleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id))
-  }
-
-  const updateProductStatus = (id, newStatus) => {
-    updateProduct(id, { status: newStatus })
-    // Here we would trigger the webhook for status-based automations
-    const automation = automations.find(a => a.triggerStatus === newStatus)
-    if (automation) {
-      console.log(`Would trigger automation: ${automation.name}`)
+  const updateAutomation = useCallback(async (id, updates) => {
+    try {
+      const updated = await db.automations.update(id, updates)
+      setAutomations(prev => prev.map(a => a.id === id ? updated : a))
+      return updated
+    } catch (err) {
+      console.error('Error updating automation:', err)
+      throw err
     }
-  }
+  }, [])
 
-  const getProductsByStatus = (status) => {
+  const deleteAutomation = useCallback(async (id) => {
+    try {
+      await db.automations.delete(id)
+      setAutomations(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      console.error('Error deleting automation:', err)
+      throw err
+    }
+  }, [])
+
+  // Assets CRUD
+  const addAsset = useCallback(async (assetData) => {
+    if (!user) throw new Error('Must be logged in')
+    
+    try {
+      const newAsset = await db.assets.create({
+        user_id: user.id,
+        product_id: assetData.productId || null,
+        type: assetData.type,
+        name: assetData.name,
+        file_url: assetData.fileUrl || '',
+        content: assetData.content || '',
+        metadata: assetData.metadata || {},
+      })
+      
+      setAssets(prev => [newAsset, ...prev])
+      return newAsset
+    } catch (err) {
+      console.error('Error adding asset:', err)
+      throw err
+    }
+  }, [user])
+
+  const deleteAsset = useCallback(async (id) => {
+    try {
+      await db.assets.delete(id)
+      setAssets(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      console.error('Error deleting asset:', err)
+      throw err
+    }
+  }, [])
+
+  // Helper functions
+  const getProductsByStatus = useCallback((status) => {
     return products.filter(p => p.status === status)
-  }
+  }, [products])
 
-  const getStats = () => {
+  const getAssetsByProduct = useCallback((productId) => {
+    return assets.filter(a => a.product_id === productId)
+  }, [assets])
+
+  const getStats = useCallback(() => {
     return {
       total: products.length,
       new: products.filter(p => p.status === 'new').length,
-      inProgress: products.filter(p => ['banner_generation', 'landing_page', 'review'].includes(p.status)).length,
+      inProgress: products.filter(p => ['banner_gen', 'landing_page', 'review'].includes(p.status)).length,
       ready: products.filter(p => p.status === 'ready').length,
       live: products.filter(p => p.status === 'live').length,
     }
+  }, [products])
+
+  // Format database product to frontend format
+  const formatProduct = (dbProduct) => ({
+    id: dbProduct.id,
+    name: dbProduct.name,
+    description: dbProduct.description,
+    status: dbProduct.status,
+    market: dbProduct.target_market,
+    niche: dbProduct.niche,
+    price: dbProduct.price,
+    notes: dbProduct.notes || '',
+    tags: dbProduct.metadata?.tags || [],
+    targetAudience: dbProduct.metadata?.targetAudience || '',
+    createdAt: dbProduct.created_at,
+    updatedAt: dbProduct.updated_at,
+    // These will be populated from assets
+    banners: [],
+    landingPage: { html: '', status: 'pending' },
+  })
+
+  const value = {
+    // Data
+    products,
+    automations,
+    assets,
+    loading,
+    error,
+    
+    // Products
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    updateProductStatus,
+    getProductsByStatus,
+    
+    // Automations
+    addAutomation,
+    updateAutomation,
+    deleteAutomation,
+    
+    // Assets
+    addAsset,
+    deleteAsset,
+    getAssetsByProduct,
+    
+    // Utils
+    getStats,
+    refreshData: fetchAllData,
+    STATUSES,
   }
 
   return (
-    <DataContext.Provider value={{
-      products,
-      automations,
-      loading,
-      addProduct,
-      updateProduct,
-      deleteProduct,
-      updateProductStatus,
-      getProductsByStatus,
-      getStats,
-      STATUSES,
-    }}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   )

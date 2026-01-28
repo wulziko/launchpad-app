@@ -295,14 +295,26 @@ function NewProductModal({ onClose, onAdd }) {
     tags: '',
   })
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    onAdd({
-      ...formData,
-      price: parseFloat(formData.price) || 0,
-      tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-    })
-    onClose()
+    setSubmitting(true)
+    setError('')
+    
+    try {
+      await onAdd({
+        ...formData,
+        price: parseFloat(formData.price) || 0,
+        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+      })
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Failed to add product')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // Use createPortal to render at document.body level (avoids transform stacking context issues)
@@ -318,6 +330,12 @@ function NewProductModal({ onClose, onAdd }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">Product Name *</label>
             <input
@@ -405,12 +423,21 @@ function NewProductModal({ onClose, onAdd }) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1" disabled={submitting}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary flex-1">
-              <Plus className="w-5 h-5" />
-              Add Product
+            <button type="submit" className="btn btn-primary flex-1" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />
+                  Add Product
+                </>
+              )}
             </button>
           </div>
         </form>
