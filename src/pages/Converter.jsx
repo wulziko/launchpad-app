@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { convertHTMLToGemPages } from '../utils/gempagesConverter'
 import {
   FileCode,
   Upload,
@@ -8,14 +9,15 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Trash2
+  Trash2,
+  FileJson
 } from 'lucide-react'
 
 export default function Converter() {
   const [inputHtml, setInputHtml] = useState('')
-  const [outputHtml, setOutputHtml] = useState('')
+  const [outputJson, setOutputJson] = useState('')
   const [fileName, setFileName] = useState('')
-  const [status, setStatus] = useState(null) // { type: 'success' | 'error', message: string }
+  const [status, setStatus] = useState(null)
   const [copied, setCopied] = useState(false)
   const [converting, setConverting] = useState(false)
   const fileInputRef = useRef(null)
@@ -59,139 +61,39 @@ export default function Converter() {
     setConverting(true)
     setStatus(null)
 
-    // Simulate processing time
     setTimeout(() => {
       try {
-        const converted = performConversion(inputHtml)
-        setOutputHtml(converted)
-        setStatus({ type: 'success', message: 'Conversion complete! Copy or download your GemPages-ready HTML.' })
+        const gemPagesData = convertHTMLToGemPages(inputHtml)
+        const jsonString = JSON.stringify(gemPagesData, null, 2)
+        setOutputJson(jsonString)
+        setStatus({ type: 'success', message: 'Conversion complete! Download the JSON file and import it into GemPages.' })
       } catch (err) {
+        console.error('Conversion error:', err)
         setStatus({ type: 'error', message: 'Conversion failed: ' + err.message })
       }
       setConverting(false)
     }, 500)
   }
 
-  const performConversion = (html) => {
-    // Extract body content if full HTML document
-    let content = html
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
-    if (bodyMatch) {
-      content = bodyMatch[1]
-    }
-
-    // Extract existing styles
-    let styles = ''
-    const styleMatches = html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)
-    for (const match of styleMatches) {
-      styles += match[1] + '\n'
-    }
-
-    // Remove style tags from content
-    content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-
-    // Prefix CSS
-    const prefixedStyles = prefixCSS(styles)
-
-    // Prefix HTML classes
-    const prefixedContent = prefixHTML(content)
-
-    // Build output
-    return `<!-- GemPages-Ready Advertorial - Paste into Custom HTML Element -->
-<style>
-.gp-adv-wrap {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.7;
-  color: #1f2937;
-  background: #FFFFFF;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.gp-adv-wrap *, .gp-adv-wrap *::before, .gp-adv-wrap *::after {
-  box-sizing: border-box;
-}
-
-.gp-adv-wrap img {
-  max-width: 100%;
-  height: auto;
-}
-
-.gp-adv-wrap a {
-  color: inherit;
-}
-
-${prefixedStyles}
-</style>
-
-<div class="gp-adv-wrap">
-${prefixedContent}
-</div>`
-  }
-
-  const prefixCSS = (css) => {
-    // Remove :root and body selectors
-    css = css.replace(/:root\s*\{([^}]*)\}/g, '.gp-adv-wrap {$1}')
-    css = css.replace(/body\s*\{([^}]*)\}/g, '')
-
-    // Handle CSS custom properties
-    css = css.replace(/--([a-zA-Z0-9-]+)\s*:/g, '--gp-$1:')
-    css = css.replace(/var\(--([a-zA-Z0-9-]+)\)/g, 'var(--gp-$1)')
-
-    // Prefix all class selectors
-    css = css.replace(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g, '.gp-$1')
-
-    // Fix double-prefixed
-    css = css.replace(/\.gp-gp-/g, '.gp-')
-
-    // Scope selectors
-    const lines = css.split('\n')
-    const scopedLines = lines.map(line => {
-      if (line.match(/^\s*\.gp-[a-zA-Z]/)) {
-        return line.replace(/^\s*(\.gp-[^{]+)/, '.gp-adv-wrap $1')
-      }
-      return line
-    })
-
-    return scopedLines.join('\n')
-  }
-
-  const prefixHTML = (html) => {
-    // Prefix all class names
-    html = html.replace(/class="([^"]*)"/g, (match, classes) => {
-      const prefixed = classes
-        .split(/\s+/)
-        .map(c => c ? 'gp-' + c : '')
-        .join(' ')
-      return `class="${prefixed}"`
-    })
-
-    // Fix double-prefixed
-    html = html.replace(/gp-gp-/g, 'gp-')
-
-    return html
-  }
-
   const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(outputHtml)
+    await navigator.clipboard.writeText(outputJson)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   const downloadFile = () => {
-    const blob = new Blob([outputHtml], { type: 'text/html' })
+    const blob = new Blob([outputJson], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'gempages-advertorial.html'
+    a.download = 'gempages-import.json'
     a.click()
     URL.revokeObjectURL(url)
   }
 
   const clearAll = () => {
     setInputHtml('')
-    setOutputHtml('')
+    setOutputJson('')
     setFileName('')
     setStatus(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -203,7 +105,7 @@ ${prefixedContent}
       <div>
         <h1 className="text-2xl font-bold text-white">GemPages Converter</h1>
         <p className="text-dark-400 mt-1">
-          Convert your HTML advertorials to GemPages-ready format
+          Convert HTML advertorials to GemPages native format (JSON import)
         </p>
       </div>
 
@@ -279,8 +181,8 @@ ${prefixedContent}
               </>
             ) : (
               <>
-                <FileCode className="w-5 h-5" />
-                Convert to GemPages
+                <FileJson className="w-5 h-5" />
+                Convert to GemPages JSON
               </>
             )}
           </button>
@@ -289,55 +191,73 @@ ${prefixedContent}
         {/* Output */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">GemPages-Ready Output</h2>
-            {outputHtml && (
+            <h2 className="text-lg font-semibold text-white">GemPages Import File</h2>
+            {outputJson && (
               <div className="flex gap-2">
                 <button onClick={copyToClipboard} className="btn btn-secondary text-sm py-1.5">
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
-                <button onClick={downloadFile} className="btn btn-secondary text-sm py-1.5">
+                <button onClick={downloadFile} className="btn btn-primary text-sm py-1.5">
                   <Download className="w-4 h-4" />
-                  Download
+                  Download JSON
                 </button>
               </div>
             )}
           </div>
 
-          {outputHtml ? (
+          {outputJson ? (
             <textarea
-              value={outputHtml}
+              value={outputJson}
               readOnly
               className="input font-mono text-sm min-h-[400px] bg-dark-800 text-dark-300"
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-dark-500">
-              <FileCode className="w-16 h-16 mb-4 opacity-50" />
-              <p>Converted HTML will appear here</p>
+              <FileJson className="w-16 h-16 mb-4 opacity-50" />
+              <p>GemPages JSON will appear here</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Info */}
+      {/* Instructions */}
+      <div className="card bg-dark-800/50">
+        <h3 className="font-semibold text-white mb-3">How to import into GemPages:</h3>
+        <ol className="space-y-3 text-sm text-dark-300 list-decimal list-inside">
+          <li>Click <strong className="text-white">"Download JSON"</strong> above after conversion</li>
+          <li>Open <strong className="text-white">GemPages Editor</strong> in your Shopify store</li>
+          <li>Create a new page or open an existing one</li>
+          <li>Click the <strong className="text-white">⚙️ Settings icon</strong> (top right)</li>
+          <li>Select <strong className="text-white">"Import"</strong> → <strong className="text-white">"From file"</strong></li>
+          <li>Upload the downloaded JSON file</li>
+          <li>Done! Your advertorial is now a native GemPages page 🎉</li>
+        </ol>
+      </div>
+
+      {/* Features */}
       <div className="card bg-dark-800/50">
         <h3 className="font-semibold text-white mb-3">What this converter does:</h3>
         <ul className="space-y-2 text-sm text-dark-300">
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-            <span>Scopes all CSS classes with <code className="text-primary-400">gp-</code> prefix to prevent conflicts</span>
+            <span>Converts to <strong className="text-white">native GemPages components</strong> (not Custom HTML)</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-            <span>Wraps content in a container for clean isolation in GemPages</span>
+            <span>Creates <strong className="text-white">working countdown timers</strong> (evergreen, auto-loops)</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-            <span>Preserves responsive styles and mobile compatibility</span>
+            <span>Preserves <strong className="text-white">sticky headers</strong> with proper positioning</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-            <span>Makes the output ready to paste into GemPages Custom HTML element</span>
+            <span>Maintains <strong className="text-white">responsive styling</strong> for desktop, tablet & mobile</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+            <span>Fully <strong className="text-white">editable</strong> in GemPages after import</span>
           </li>
         </ul>
       </div>
