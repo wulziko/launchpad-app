@@ -22,9 +22,9 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('')
   const { products, STATUSES, updateProductStatus, addProduct, deleteProduct } = useData()
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.niche.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = (products || []).filter(p =>
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.niche?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const getProductsByStatus = (statusId) => {
@@ -271,9 +271,9 @@ function ProductCard({ product, statuses, onStatusChange, onDelete }) {
       </div>
 
       {/* Tags */}
-      {product.tags.length > 0 && (
+      {product.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
-          {product.tags.map(tag => (
+          {product.tags?.map(tag => (
             <span key={tag} className="text-xs px-2 py-0.5 bg-dark-700 text-dark-300 rounded">
               {tag}
             </span>
