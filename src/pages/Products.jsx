@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
+import { storage } from '../lib/supabase'
 import { PageLoading, CardSkeleton } from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
 import {
@@ -15,7 +16,9 @@ import {
   Trash2,
   ChevronRight,
   X,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Image
 } from 'lucide-react'
 
 export default function Products() {
@@ -217,7 +220,6 @@ export default function Products() {
                 <th className="pb-3 font-medium">Market</th>
                 <th className="pb-3 font-medium">Niche</th>
                 <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Price</th>
                 <th className="pb-3 pr-4 font-medium"></th>
               </tr>
             </thead>
@@ -245,7 +247,6 @@ export default function Products() {
                         {statusInfo?.label || product.status || 'Unknown'}
                       </span>
                     </td>
-                    <td className="py-4 text-dark-300">${product.price || 0}</td>
                     <td className="py-4 pr-4">
                       <Link to={`/products/${product.id}`} className="btn btn-ghost p-2">
                         <ChevronRight className="w-5 h-5" />
@@ -321,8 +322,12 @@ function ProductCard({ product, statuses, onStatusChange, onDelete }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-dark-400">
           <span>{product.market || '-'}</span>
-          <span>•</span>
-          <span>${product.price || 0}</span>
+          {product.niche && (
+            <>
+              <span>•</span>
+              <span>{product.niche}</span>
+            </>
+          )}
         </div>
         
         {/* Status Dropdown */}
@@ -376,7 +381,6 @@ function NewProductModal({ onClose, onAdd }) {
     market: 'US',
     niche: '',
     targetAudience: '',
-    price: '',
     tags: '',
     // n8n workflow fields
     language: 'English',
@@ -390,6 +394,40 @@ function NewProductModal({ onClose, onAdd }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file')
+        return
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image must be less than 5MB')
+        return
+      }
+      setImageFile(file)
+      setError('')
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => setImagePreview(e.target.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -404,18 +442,33 @@ function NewProductModal({ onClose, onAdd }) {
     setError('')
     
     try {
+      let productImageUrl = formData.product_image_url
+      
+      // Upload image if selected
+      if (imageFile) {
+        setUploadingImage(true)
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `product-images/${fileName}`
+        
+        await storage.upload('products', filePath, imageFile)
+        productImageUrl = storage.getPublicUrl('products', filePath)
+        setUploadingImage(false)
+      }
+      
       await onAdd({
         ...formData,
         name: formData.name.trim(),
         description: formData.description.trim(),
         niche: formData.niche.trim(),
-        price: parseFloat(formData.price) || 0,
+        product_image_url: productImageUrl,
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       })
       onClose()
     } catch (err) {
       console.error('Error adding product:', err)
       setError(err.message || 'Failed to add product. Please try again.')
+      setUploadingImage(false)
     } finally {
       setSubmitting(false)
     }
@@ -464,42 +517,26 @@ function NewProductModal({ onClose, onAdd }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Niche *</label>
-              <select
-                value={formData.niche}
-                onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
-                className="input"
-                disabled={submitting}
-              >
-                <option value="">Select niche...</option>
-                <option value="Beauty & Skincare">Beauty & Skincare</option>
-                <option value="Health & Wellness">Health & Wellness</option>
-                <option value="Fitness">Fitness</option>
-                <option value="Home & Garden">Home & Garden</option>
-                <option value="Tech & Gadgets">Tech & Gadgets</option>
-                <option value="Fashion">Fashion</option>
-                <option value="Pet Supplies">Pet Supplies</option>
-                <option value="Baby & Kids">Baby & Kids</option>
-                <option value="Kitchen">Kitchen</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Price ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="input"
-                placeholder="49.99"
-                disabled={submitting}
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Niche *</label>
+            <select
+              value={formData.niche}
+              onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
+              className="input"
+              disabled={submitting}
+            >
+              <option value="">Select niche...</option>
+              <option value="Beauty & Skincare">Beauty & Skincare</option>
+              <option value="Health & Wellness">Health & Wellness</option>
+              <option value="Fitness">Fitness</option>
+              <option value="Home & Garden">Home & Garden</option>
+              <option value="Tech & Gadgets">Tech & Gadgets</option>
+              <option value="Fashion">Fashion</option>
+              <option value="Pet Supplies">Pet Supplies</option>
+              <option value="Baby & Kids">Baby & Kids</option>
+              <option value="Kitchen">Kitchen</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -553,16 +590,46 @@ function NewProductModal({ onClose, onAdd }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Product Image URL</label>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Product Image</label>
             <input
-              type="url"
-              value={formData.product_image_url}
-              onChange={(e) => setFormData({ ...formData, product_image_url: e.target.value })}
-              className="input"
-              placeholder="https://example.com/product-image.jpg"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
               disabled={submitting}
             />
-            <p className="text-xs text-dark-500 mt-1">Used for banner generation</p>
+            {imagePreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-32 h-32 object-cover rounded-lg border border-dark-600"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  disabled={submitting}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-dark-600 rounded-lg p-6 hover:border-dark-500 hover:bg-dark-800/50 transition-colors"
+                disabled={submitting}
+              >
+                <div className="flex flex-col items-center gap-2 text-dark-400">
+                  <Upload className="w-8 h-8" />
+                  <span className="text-sm">Click to upload image</span>
+                  <span className="text-xs">PNG, JPG up to 5MB</span>
+                </div>
+              </button>
+            )}
+            <p className="text-xs text-dark-500 mt-2">Used for banner generation</p>
           </div>
 
           {/* Collapsible Advanced Section */}
@@ -649,7 +716,7 @@ function NewProductModal({ onClose, onAdd }) {
               {submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" />
-                  Adding...
+                  {uploadingImage ? 'Uploading image...' : 'Adding...'}
                 </>
               ) : (
                 <>

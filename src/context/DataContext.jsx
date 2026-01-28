@@ -71,10 +71,16 @@ export function DataProvider({ children }) {
         status: 'new',
         niche: productData.niche || '',
         target_market: productData.market || 'US',
-        price: parseFloat(productData.price) || 0,
         metadata: {
           targetAudience: productData.targetAudience || '',
           tags: productData.tags || [],
+          language: productData.language || 'English',
+          country: productData.country || 'United States',
+          gender: productData.gender || 'All',
+          amazon_link: productData.amazon_link || '',
+          competitor_link_1: productData.competitor_link_1 || '',
+          competitor_link_2: productData.competitor_link_2 || '',
+          product_image_url: productData.product_image_url || '',
         }
       })
       
@@ -96,7 +102,6 @@ export function DataProvider({ children }) {
       if (updates.status) dbUpdates.status = updates.status
       if (updates.niche) dbUpdates.niche = updates.niche
       if (updates.market) dbUpdates.target_market = updates.market
-      if (updates.price) dbUpdates.price = parseFloat(updates.price)
       if (updates.notes) dbUpdates.notes = updates.notes
       
       const updated = await db.products.update(id, dbUpdates)
@@ -251,10 +256,16 @@ export function DataProvider({ children }) {
     status: dbProduct.status,
     market: dbProduct.target_market,
     niche: dbProduct.niche,
-    price: dbProduct.price,
     notes: dbProduct.notes || '',
     tags: dbProduct.metadata?.tags || [],
     targetAudience: dbProduct.metadata?.targetAudience || '',
+    language: dbProduct.metadata?.language || 'English',
+    country: dbProduct.metadata?.country || 'United States',
+    gender: dbProduct.metadata?.gender || 'All',
+    amazon_link: dbProduct.metadata?.amazon_link || '',
+    competitor_link_1: dbProduct.metadata?.competitor_link_1 || '',
+    competitor_link_2: dbProduct.metadata?.competitor_link_2 || '',
+    product_image_url: dbProduct.metadata?.product_image_url || '',
     createdAt: dbProduct.created_at,
     updatedAt: dbProduct.updated_at,
     // These will be populated from assets
