@@ -1,6 +1,23 @@
 /**
  * Vercel Serverless Function - Proxy to n8n webhook
- * This avoids CORS issues by making server-to-server requests
+ * Triggers landing page generation for LaunchPad products
+ * 
+ * Expected body:
+ * {
+ *   id: string (product UUID),
+ *   user_id: string (user UUID),
+ *   name: string (product name),
+ *   niche: string,
+ *   country: string,
+ *   language: string,
+ *   gender: string,
+ *   amazon_link: string,
+ *   competitor_link_1: string,
+ *   competitor_link_2: string,
+ *   product_image_url: string,
+ *   source_url: string (aliexpress/supplier),
+ *   status: string
+ * }
  */
 
 const N8N_WEBHOOK_URL = 'https://n8n.srv1300789.hstgr.cloud/webhook/launchpad-banner-gen';
@@ -11,6 +28,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Validate required fields
+  const { id, user_id, name } = req.body;
+  if (!id || !user_id || !name) {
+    return res.status(400).json({ 
+      error: 'Missing required fields',
+      required: ['id', 'user_id', 'name']
+    });
+  }
+
   try {
     // Forward the request to n8n
     const response = await fetch(N8N_WEBHOOK_URL, {
@@ -18,10 +44,45 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify({
+        // Product identification
+        id: req.body.id,
+        user_id: req.body.user_id,
+        name: req.body.name,
+        
+        // Core fields for AI research
+        niche: req.body.niche || 'General',
+        country: req.body.country || 'US',
+        language: req.body.language || 'English',
+        gender: req.body.gender || 'All',
+        target_market: req.body.target_market || req.body.country || 'US',
+        
+        // Links for research
+        amazon_link: req.body.amazon_link || '',
+        competitor_link_1: req.body.competitor_link_1 || '',
+        competitor_link_2: req.body.competitor_link_2 || '',
+        source_url: req.body.source_url || '',
+        
+        // Product image
+        product_image_url: req.body.product_image_url || '',
+        
+        // Status
+        status: req.body.status || 'new',
+        
+        // Trigger metadata
+        triggered_at: new Date().toISOString(),
+        trigger_source: 'launchpad-app'
+      }),
     });
 
-    const data = await response.json();
+    // Handle non-JSON responses
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = { message: await response.text() };
+    }
 
     if (!response.ok) {
       return res.status(response.status).json({ 
@@ -32,14 +93,15 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ 
       success: true, 
-      message: 'Banner generation started',
+      message: 'Landing page generation started',
+      product_id: id,
       n8n_response: data
     });
 
   } catch (error) {
     console.error('Error calling n8n webhook:', error);
     return res.status(500).json({ 
-      error: 'Failed to trigger banner generation',
+      error: 'Failed to trigger landing page generation',
       message: error.message 
     });
   }

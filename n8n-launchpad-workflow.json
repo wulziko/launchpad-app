@@ -1,0 +1,243 @@
+{
+  "name": "LaunchPad - Landing Page Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "launchpad-banner-gen",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "LaunchPad Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "launchpad-banner-gen"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform LaunchPad data to workflow format\nconst product = $input.first().json;\n\n// LaunchPad sends these fields:\n// id, name, niche, country, language, gender, amazon_link, \n// competitor_link_1, competitor_link_2, product_image_url, status\n\nreturn {\n  json: {\n    // Product identification\n    id: product.id,\n    product_name: product.name,\n    \n    // Core fields for AI research\n    niche: product.niche || 'General',\n    country: product.country || 'US',\n    language: product.language || 'English',\n    gender: product.gender || 'All',\n    \n    // Links for research\n    amazon_link: product.amazon_link || '',\n    competitor_link_1: product.competitor_link_1 || '',\n    competitor_link_2: product.competitor_link_2 || '',\n    aliexpress_link: product.source_url || '',\n    \n    // Product image\n    product_image: product.product_image_url || '',\n    \n    // Metadata\n    current_status: product.status,\n    target_market: product.target_market || product.country || 'US'\n  }\n};"
+      },
+      "id": "transform-data",
+      "name": "Transform LaunchPad Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ `Perform comprehensive market research for creating TWO high-converting landing pages (Advertorial + Product Page).\n\n=== PRODUCT DETAILS ===\n- **Product Name:** ${$json.product_name}\n- **Niche:** ${$json.niche}\n- **Target Country:** ${$json.country}\n- **Output Language:** ${$json.language}\n- **Target Gender:** ${$json.gender}\n\n=== REFERENCE LINKS (ANALYZE THESE) ===\n- **Amazon:** ${$json.amazon_link || 'N/A'}\n- **Competitor 1:** ${$json.competitor_link_1 || 'N/A'}\n- **Competitor 2:** ${$json.competitor_link_2 || 'N/A'}\n- **AliExpress:** ${$json.aliexpress_link || 'N/A'}\n\n=== RESEARCH MISSION ===\nFind the \"Hidden Truths\" that make people BUY:\n\n**1. PRICING INTELLIGENCE (ALTERNATIVES ONLY):**\n- Find the EXACT price of professional alternatives\n- Research competitor pricing for similar products\n- Calculate the \"Total Annual Cost\" of staying with the current alternative\n\n**2. THE UNIQUE MECHANISM:**\n- What is the specific scientific/technical reason this works?\n- What makes this DIFFERENT from the \"cheap\" versions?\n\n**3. EMOTIONAL TRIGGERS & THE VILLAIN:**\n- Identify the \"3 AM Problem\": What is the deep frustration the customer feels?\n- Who/What is the \"Villain\"?\n\n**4. SOCIAL PROOF:**\n- Find specific review themes. Look for \"Skeptic-to-Believer\" stories.\n- Identify any authority signals (FDA, NASA, Medical studies, etc.).\n\n=== OUTPUT FORMAT (STRICT) ===\nWrite the analysis in ${$json.language} using this EXACT structure:\n\n# LANDING PAGE INTELLIGENCE REPORT\n\n## 1. TARGET AVATAR PROFILE\n- **Primary Persona:** [Age, Gender, Key Life Situation]\n- **The \"3 AM Problem\":** [The deep emotional pain point]\n- **Emotional Transformation:** [Before vs. After state]\n\n## 2. PRICE ANCHORING DATA (ALTERNATIVES ONLY)\n- **Professional Alternative #1:** [Name, Cost, Frequency, Total Annual Cost, Downsides]\n- **Professional Alternative #2:** [Name, Cost, Downsides]\n- **Price Anchor Statement:** [Copy snippet comparing these costs]\n\n## 3. THE UNIQUE MECHANISM (THE \"SECRET\")\n- **Technical Name:** [Scientific terminology]\n- **The Science:** [Detailed explanation with numbers/data]\n- **The \"Aha!\" Statement:** [One sentence that makes the mechanism click]\n\n## 4. HOOK ARSENAL\n- **A. The Myth-Buster Hook:** [Myth vs. Truth + Headline]\n- **B. The Shocking Statistic Hook:** [Stat + Headline]\n- **C. The Transformation Hook:** [Timeframe + Result + Headline]\n- **D. The Enemy Hook:** [The Villain + Headline]\n\n## 5. SOCIAL PROOF BANK\n- **Authority Signals:** [Scientific or Medical credibility]\n- **Review Highlights:** [5 REAL-style quotes focusing on specific transformations]\n\n## 6. OBJECTION DESTROYERS (FAQ DATA)\n- [Top 5 concerns (Safety, Price, Complexity, etc.) + Fact-based Killer Responses]\n\n## 7. COMPETITIVE INTELLIGENCE\n- **Competitor Weaknesses:** [Analysis based on links provided]\n- **Comparison Table Data:** [Markdown table: Our Product vs. Generic Alternatives]\n\n## 8. VISUAL DIRECTION\n- **Hero Image Concept:** [Description for AI image generation]\n- **Target Model Description:** [Specific age, ethnicity, and look for the target market]\n\n---\n**CRITICAL:** Write entirely in ${$json.language}. Do not include our product's price.` }}",
+        "options": {
+          "systemMessage": "You are a world-class Direct Response Copywriter and Market Researcher specializing in high-converting ecommerce landing pages. Your research will fuel BOTH an Advertorial (presell page) AND a Product Page. Your goal is to extract specific data points, emotional triggers, competitor pricing, scientific mechanisms, and social proof that can be used to create aggressive, conversion-focused copy.\n\n**CRITICAL STRATEGIC RULES:**\n1. **NO PRODUCT PRICE:** Do NOT include the subject product's own price in your research.\n2. **THE \"SECRET\" MECHANISM:** Prioritize finding the scientific or technical reason why the product works.\n3. **OBJECTION CRUSHING:** Identify the deep-seated reasons people hesitate to buy and find the factual data to destroy those objections.\n4. **NATIVE LANGUAGE:** Write all output in the requested language using native idioms, tone, and cultural nuances."
+        }
+      },
+      "id": "ai-research",
+      "name": "AI Research Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3-pro-preview",
+        "options": {}
+      },
+      "id": "research-model",
+      "name": "Research LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [600, 500],
+      "credentials": {
+        "openRouterApi": {
+          "id": "OVX8eS7SZ6koYGGB",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract research data and prepare for content generation\nconst researchOutput = $input.first().json.output;\nconst productData = $('Transform LaunchPad Data').first().json;\n\nreturn {\n  json: {\n    research: researchOutput,\n    product_id: productData.id,\n    product_name: productData.product_name,\n    language: productData.language,\n    country: productData.country,\n    niche: productData.niche,\n    gender: productData.gender,\n    product_image: productData.product_image\n  }\n};"
+      },
+      "id": "extract-research",
+      "name": "Extract Research",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split into two page types\nconst data = $input.first().json;\n\nreturn [\n  { json: { ...data, page_type: 'advertorial' } },\n  { json: { ...data, page_type: 'product_page' } }\n];"
+      },
+      "id": "split-page-types",
+      "name": "Split Page Types",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ `Generate a high-converting ${$json.page_type === 'advertorial' ? 'ADVERTORIAL' : 'PRODUCT PAGE'} based on this research:\n\n=== PRODUCT ===\nName: ${$json.product_name}\nNiche: ${$json.niche}\nTarget: ${$json.gender} in ${$json.country}\nLanguage: ${$json.language}\n\n=== RESEARCH DATA ===\n${$json.research}\n\n=== OUTPUT REQUIREMENTS ===\nGenerate COMPLETE content for a ${$json.page_type === 'advertorial' ? 'long-form advertorial with editorial header, hook, 7 reasons sections, testimonials, and CTAs' : 'product landing page with benefits, features, social proof, and purchase CTAs'}.\n\nReturn as JSON with the following structure:\n{\n  \"page_type\": \"${$json.page_type}\",\n  \"design_notes\": {\n    \"color_scheme\": { \"primary\": \"#...\", \"accent\": \"#...\", \"background\": \"#...\" },\n    \"visual_style\": { \"image_aesthetic\": \"...\", \"photography_tone\": \"...\", \"image_treatment\": \"...\" }\n  },\n  \"sections\": [\n    {\n      \"section_name\": \"urgency_banner\" | \"editorial_header\" | \"opening_hook\" | \"reason_1_authority_origin\" | etc,\n      \"content\": { ... section-specific fields ... },\n      \"needs_image\": true/false,\n      \"image_prompt\": \"...\" (if needs_image)\n    }\n  ]\n}\n\nWrite ALL content in ${$json.language}. Make it compelling, emotional, and conversion-focused.` }}",
+        "options": {
+          "systemMessage": "You are an elite direct-response copywriter. Generate complete landing page content that converts. Return valid JSON only, no markdown wrappers."
+        }
+      },
+      "id": "generate-content",
+      "name": "Generate Page Content",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4",
+        "options": {}
+      },
+      "id": "content-model",
+      "name": "Content LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [1200, 500],
+      "credentials": {
+        "openRouterApi": {
+          "id": "OVX8eS7SZ6koYGGB",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Think strategically about the page before generating:\n- What's the unique mechanism from research?\n- Which origin country gives authority?\n- What expensive alternative can we democratize?\n- What color psychology fits this niche?\n- What are credible testimonial personas?"
+      },
+      "id": "think-tool",
+      "name": "Strategic Thinking",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [1300, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the generated content\nconst output = $input.first().json.output;\nconst productData = $('Transform LaunchPad Data').first().json;\n\nlet content;\ntry {\n  // Clean markdown if present\n  const clean = output.replace(/```json|```/g, '').trim();\n  content = JSON.parse(clean);\n} catch (e) {\n  return { json: { error: 'Failed to parse content', raw: output } };\n}\n\n// Extract sections that need images\nconst sectionsWithImages = (content.sections || [])\n  .filter(s => s.needs_image && s.image_prompt)\n  .map((s, idx) => ({\n    section_name: s.section_name,\n    image_prompt: s.image_prompt,\n    index: idx,\n    page_type: content.page_type\n  }));\n\nreturn {\n  json: {\n    product_id: productData.id,\n    product_name: productData.product_name,\n    product_image: productData.product_image,\n    page_type: content.page_type,\n    design_notes: content.design_notes,\n    sections: content.sections,\n    image_requests: sectionsWithImages\n  }\n};"
+      },
+      "id": "parse-content",
+      "name": "Parse Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final HTML from sections\nconst data = $input.first().json;\nconst sections = data.sections || [];\nconst designNotes = data.design_notes || {};\n\nconst primaryColor = designNotes.color_scheme?.primary || '#FF69B4';\nconst accentColor = designNotes.color_scheme?.accent || '#FF6B35';\nconst backgroundColor = designNotes.color_scheme?.background || '#FFFFFF';\n\nfunction escapeHtml(text) {\n  if (!text) return '';\n  if (typeof text === 'object') return JSON.stringify(text);\n  return String(text)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n    .replace(/\\n/g, '<br>');\n}\n\nlet contentHtml = '';\n\nfor (const section of sections) {\n  const sn = section.section_name;\n  const c = section.content || section;\n  \n  if (sn === 'urgency_banner') {\n    contentHtml += `<div class=\"urgency-banner\">\n      <strong>${escapeHtml(c.offer_type || 'SPECIAL OFFER')}</strong>\n      <div class=\"countdown\">Offer ends in: ${escapeHtml(c.countdown_timer || '02:58:14')}</div>\n    </div>`;\n  } else if (sn === 'editorial_header') {\n    contentHtml += `<header class=\"hero-section\">\n      <h1>${escapeHtml(c.headline)}</h1>\n      <div class=\"subhead\">${escapeHtml(c.subheadline)}</div>\n    </header>`;\n  } else if (sn === 'opening_hook') {\n    contentHtml += `<section class=\"text-section opening-hook\">\n      <div class=\"prose\">\n        <p>${escapeHtml(c.paragraph_1)}</p>\n        <p>${escapeHtml(c.paragraph_2)}</p>\n        <p>${escapeHtml(c.paragraph_3)}</p>\n      </div>\n    </section>`;\n  } else if (sn.startsWith('reason_')) {\n    contentHtml += `<section class=\"reason-section\">\n      <h2>${escapeHtml(c.headline)}</h2>\n      <div class=\"prose\">${escapeHtml(c.body || c.content)}</div>\n    </section>`;\n  } else if (sn === 'final_cta') {\n    contentHtml += `<div class=\"final-cta\">\n      <a href=\"#order\" class=\"cta-button\">${escapeHtml(c.button_text || 'Get Started Now')}</a>\n    </div>`;\n  }\n}\n\nconst html = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>${escapeHtml(data.product_name)}</title>\n  <style>\n    :root { --primary: ${primaryColor}; --accent: ${accentColor}; --bg: ${backgroundColor}; }\n    body { font-family: Georgia, serif; line-height: 1.7; color: #2c2c2c; background: #f0f2f5; margin: 0; }\n    .container { max-width: 900px; margin: 0 auto; background: var(--bg); padding: 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); }\n    .urgency-banner { background: var(--primary); color: white; text-align: center; padding: 15px; position: sticky; top: 0; z-index: 100; }\n    .hero-section { text-align: center; margin-bottom: 40px; }\n    h1 { font-size: 2.5rem; color: #111; }\n    .subhead { font-size: 1.25rem; color: #6b7280; }\n    .prose { font-size: 1.1rem; }\n    .prose p { margin-bottom: 20px; text-align: justify; }\n    .reason-section { margin: 50px 0; padding: 30px 0; border-top: 1px solid #e5e7eb; }\n    .reason-section h2 { color: var(--primary); text-align: center; }\n    .cta-button { display: block; background: var(--accent); color: white; padding: 18px 40px; font-size: 1.2rem; font-weight: bold; text-decoration: none; border-radius: 50px; text-align: center; max-width: 400px; margin: 20px auto; }\n    .cta-button:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.25); }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    ${contentHtml}\n  </div>\n</body>\n</html>`;\n\nconst fileName = `${data.page_type}_${data.product_name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}.html`;\n\nreturn {\n  json: {\n    product_id: data.product_id,\n    product_name: data.product_name,\n    page_type: data.page_type,\n    html_content: html,\n    file_name: fileName\n  }\n};"
+      },
+      "id": "build-html",
+      "name": "Build HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rxtcssesqwooggydfkvs.supabase.co/rest/v1/assets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"product_id\": $json.product_id,\n  \"user_id\": $('LaunchPad Webhook').first().json.user_id,\n  \"type\": \"landing_page\",\n  \"name\": $json.file_name,\n  \"content\": $json.html_content,\n  \"metadata\": {\n    \"page_type\": $json.page_type,\n    \"generated_at\": new Date().toISOString()\n  }\n} }}"
+      },
+      "id": "save-to-supabase",
+      "name": "Save Asset to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://rxtcssesqwooggydfkvs.supabase.co/rest/v1/products?id=eq.{{ $('Transform LaunchPad Data').first().json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"status\": \"review\" } }}"
+      },
+      "id": "update-status",
+      "name": "Update Product Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "content": "## LaunchPad Landing Page Generator\n\nThis workflow:\n1. Receives webhook from LaunchPad app\n2. Performs AI research on the product\n3. Generates advertorial + product page content\n4. Builds HTML files\n5. Saves assets to Supabase\n6. Updates product status to 'review'",
+        "height": 200,
+        "width": 400,
+        "color": 4
+      },
+      "id": "info-note",
+      "name": "Workflow Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 80]
+    }
+  ],
+  "connections": {
+    "LaunchPad Webhook": {
+      "main": [[{ "node": "Transform LaunchPad Data", "type": "main", "index": 0 }]]
+    },
+    "Transform LaunchPad Data": {
+      "main": [[{ "node": "AI Research Agent", "type": "main", "index": 0 }]]
+    },
+    "AI Research Agent": {
+      "main": [[{ "node": "Extract Research", "type": "main", "index": 0 }]]
+    },
+    "Research LLM": {
+      "ai_languageModel": [[{ "node": "AI Research Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Extract Research": {
+      "main": [[{ "node": "Split Page Types", "type": "main", "index": 0 }]]
+    },
+    "Split Page Types": {
+      "main": [[{ "node": "Generate Page Content", "type": "main", "index": 0 }]]
+    },
+    "Generate Page Content": {
+      "main": [[{ "node": "Parse Content", "type": "main", "index": 0 }]]
+    },
+    "Content LLM": {
+      "ai_languageModel": [[{ "node": "Generate Page Content", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Strategic Thinking": {
+      "ai_tool": [[{ "node": "Generate Page Content", "type": "ai_tool", "index": 0 }]]
+    },
+    "Parse Content": {
+      "main": [[{ "node": "Build HTML", "type": "main", "index": 0 }]]
+    },
+    "Build HTML": {
+      "main": [[{ "node": "Save Asset to Supabase", "type": "main", "index": 0 }]]
+    },
+    "Save Asset to Supabase": {
+      "main": [[{ "node": "Update Product Status", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
