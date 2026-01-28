@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
 import AutomationProgress from '../components/AutomationProgress'
@@ -24,8 +25,27 @@ import {
   Sparkles,
   Copy,
   ExternalLink,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Package,
+  Tag,
 } from 'lucide-react'
+
+// Tab content animation variants
+const tabContentVariants = {
+  initial: { opacity: 0, y: 10 },
+  enter: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+}
+
+// Card animation variants
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+  }),
+}
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -35,26 +55,27 @@ export default function ProductDetail() {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
-  // Safe arrays
   const safeProducts = products || []
   const safeStatuses = STATUSES || []
 
-  // Loading state
   if (loading) {
     return <PageLoading message="Loading product..." />
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center py-12"
+      >
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">Failed to load product</h2>
         <p className="text-dark-400 mb-4">{error}</p>
         <Link to="/products" className="btn btn-primary">
           Back to Products
         </Link>
-      </div>
+      </motion.div>
     )
   }
 
@@ -62,30 +83,33 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertCircle className="w-12 h-12 text-dark-400 mb-4" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center py-20"
+      >
+        <Package className="w-16 h-16 text-dark-600 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">Product not found</h2>
-        <p className="text-dark-400 mb-4">This product may have been deleted.</p>
-        <Link to="/products" className="btn btn-primary">
-          Back to Products
+        <p className="text-dark-400 mb-6">This product may have been deleted.</p>
+        <Link to="/products">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-primary"
+          >
+            Back to Products
+          </motion.button>
         </Link>
-      </div>
+      </motion.div>
     )
   }
 
-  // Safe access to product properties
   const productName = product.name || 'Untitled Product'
   const productDescription = product.description || ''
   const productPrice = product.price || 0
   const productMarket = product.market || '-'
-  const productNiche = product.niche || '-'
-  const productTargetAudience = product.targetAudience || 'Not specified'
-  const productTags = product.tags || []
-  const productNotes = product.notes || ''
   const productBanners = product.banners || []
   const productLandingPage = product.landingPage || { html: '', status: 'pending' }
-  const productCreatedAt = product.createdAt || product.created_at
-  const productUpdatedAt = product.updatedAt || product.updated_at
 
   const statusInfo = safeStatuses.find(s => s?.id === product?.status) || {}
 
@@ -142,412 +166,592 @@ export default function ProductDetail() {
   ]
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
+      >
         <div className="flex items-start gap-4">
-          <button
+          <motion.button
             onClick={() => navigate('/products')}
-            className="p-2 text-dark-400 hover:text-white hover:bg-dark-800 rounded-lg transition-colors"
+            whileHover={{ scale: 1.1, x: -2 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2.5 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </motion.button>
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-white">{productName}</h1>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-3 mb-2"
+            >
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">{productName}</h1>
               
               {/* Status Dropdown */}
               <div className="relative">
-                <button
+                <motion.button
                   onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-                  className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'} cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`badge ${statusInfo?.color || 'bg-dark-700'} ${statusInfo?.textColor || 'text-dark-300'} cursor-pointer flex items-center gap-1`}
                 >
                   {statusInfo?.label || product?.status || 'Unknown'}
                   <ChevronDown className="w-3 h-3" />
-                </button>
-                {statusMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
-                    <div className="absolute left-0 top-full mt-1 z-20 bg-dark-800 border border-dark-600 rounded-lg shadow-xl py-1 min-w-[180px]">
-                      {safeStatuses.map((status) => (
-                        <button
-                          key={status?.id || Math.random()}
-                          onClick={() => handleStatusChange(status?.id)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-dark-700 ${
-                            product?.status === status?.id ? 'text-primary-400' : 'text-dark-200'
-                          }`}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
-                          {status?.label || 'Unknown'}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+                </motion.button>
+                <AnimatePresence>
+                  {statusMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        className="absolute left-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 min-w-[180px] overflow-hidden"
+                      >
+                        {safeStatuses.map((status, index) => (
+                          <motion.button
+                            key={status?.id || Math.random()}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            onClick={() => handleStatusChange(status?.id)}
+                            className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-dark-700 transition-colors ${
+                              product?.status === status?.id ? 'text-primary-400' : 'text-dark-300'
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
+                            {status?.label || 'Unknown'}
+                          </motion.button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
-            <p className="text-dark-400">{productDescription || 'No description'}</p>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="text-dark-400"
+            >
+              {productDescription || 'No description'}
+            </motion.p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIsEditing(true)} className="btn btn-secondary">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-2 flex-shrink-0"
+        >
+          <motion.button
+            onClick={() => setIsEditing(true)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-secondary"
+          >
             <Edit className="w-4 h-4" />
             Edit
-          </button>
-          <button onClick={handleDuplicate} className="btn btn-secondary">
+          </motion.button>
+          <motion.button
+            onClick={handleDuplicate}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-secondary"
+          >
             <Copy className="w-4 h-4" />
             Duplicate
-          </button>
-          <button onClick={handleDelete} className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10">
+          </motion.button>
+          <motion.button
+            onClick={handleDelete}
+            whileHover={{ scale: 1.02, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-ghost text-red-400 hover:text-red-300"
+          >
             <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 text-green-400" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-white">${productPrice}</p>
-            <p className="text-xs text-dark-400">Price</p>
-          </div>
-        </div>
-        <div className="card flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <Globe className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-white">{productMarket}</p>
-            <p className="text-xs text-dark-400">Market</p>
-          </div>
-        </div>
-        <div className="card flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            <Users className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-white truncate">{productTargetAudience}</p>
-            <p className="text-xs text-dark-400">Target</p>
-          </div>
-        </div>
-        <div className="card flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
-            <Image className="w-5 h-5 text-primary-400" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-white">{productBanners.length}</p>
-            <p className="text-xs text-dark-400">Banners</p>
-          </div>
-        </div>
+        {[
+          { icon: DollarSign, label: 'Price', value: `$${productPrice}`, color: 'green' },
+          { icon: Globe, label: 'Market', value: productMarket, color: 'blue' },
+          { icon: Users, label: 'Target', value: product?.targetAudience || 'Not specified', color: 'purple' },
+          { icon: Image, label: 'Banners', value: productBanners.length, color: 'pink' },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            custom={index}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="card flex items-center gap-3"
+          >
+            <motion.div
+              whileHover={{ rotate: 5 }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                stat.color === 'green' ? 'bg-green-500/10' :
+                stat.color === 'blue' ? 'bg-blue-500/10' :
+                stat.color === 'purple' ? 'bg-purple-500/10' :
+                'bg-primary-500/10'
+              }`}
+            >
+              <stat.icon className={`w-5 h-5 ${
+                stat.color === 'green' ? 'text-green-400' :
+                stat.color === 'blue' ? 'text-blue-400' :
+                stat.color === 'purple' ? 'text-purple-400' :
+                'text-primary-400'
+              }`} />
+            </motion.div>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-white truncate">{stat.value}</p>
+              <p className="text-xs text-dark-500">{stat.label}</p>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-dark-700">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="border-b border-dark-800"
+      >
         <div className="flex gap-1">
-          {tabs.map((tab) => (
-            <button
+          {tabs.map((tab, index) => (
+            <motion.button
               key={tab.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + index * 0.05 }}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'border-primary-500 text-white'
-                  : 'border-transparent text-dark-400 hover:text-dark-200'
+                  ? 'text-white'
+                  : 'text-dark-500 hover:text-dark-300'
               }`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
               {tab.count !== undefined && (
-                <span className="px-1.5 py-0.5 text-xs bg-dark-700 rounded">
+                <span className={`px-1.5 py-0.5 text-xs rounded-md ${
+                  activeTab === tab.id ? 'bg-primary-500/20 text-primary-400' : 'bg-dark-800 text-dark-500'
+                }`}>
                   {tab.count}
                 </span>
               )}
-            </button>
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500"
+                  transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                />
+              )}
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Tab Content */}
-      <div className="animate-fadeIn">
-        {activeTab === 'overview' && (
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Product Details */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-white mb-4">Product Details</h3>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-dark-400 mb-1">Niche</p>
-                    <p className="text-white">{product?.niche || '-'}</p>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          variants={tabContentVariants}
+          initial="initial"
+          animate="enter"
+          exit="exit"
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {activeTab === 'overview' && (
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Product Details */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Package className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Product Details</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-dark-500 mb-1">Niche</p>
+                      <p className="text-white font-medium">{product?.niche || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-dark-500 mb-1">Target Audience</p>
+                      <p className="text-white font-medium">{product?.targetAudience || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-dark-500 mb-1">Country</p>
+                      <p className="text-white">{product?.country || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-dark-500 mb-1">Language</p>
+                      <p className="text-white">{product?.language || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-dark-500 mb-1">Gender</p>
+                      <p className="text-white">{product?.gender || '-'}</p>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm text-dark-400 mb-1">Target Audience</p>
-                    <p className="text-white">{product?.targetAudience || '-'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-dark-400 mb-1">Country</p>
-                    <p className="text-white">{product?.country || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-dark-400 mb-1">Language</p>
-                    <p className="text-white">{product?.language || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-dark-400 mb-1">Gender</p>
-                    <p className="text-white">{product?.gender || '-'}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(product?.tags || []).length > 0 ? product.tags.map((tag, i) => (
-                      <span key={tag || i} className="badge bg-dark-700 text-dark-200">
-                        {tag}
-                      </span>
-                    )) : (
-                      <span className="text-dark-500">No tags</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Research Links */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <LinkIcon className="w-5 h-5" />
-                Research Links
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Aliexpress Link</p>
-                  {product?.aliexpress_link ? (
-                    <a href={product.aliexpress_link} target="_blank" rel="noopener noreferrer" 
-                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
-                      {product.aliexpress_link.substring(0, 50)}...
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ) : <span className="text-dark-500">-</span>}
-                </div>
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Amazon Link</p>
-                  {product?.amazon_link ? (
-                    <a href={product.amazon_link} target="_blank" rel="noopener noreferrer" 
-                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
-                      {product.amazon_link.substring(0, 50)}...
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ) : <span className="text-dark-500">-</span>}
-                </div>
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Competitor #1</p>
-                  {product?.competitor_link_1 ? (
-                    <a href={product.competitor_link_1} target="_blank" rel="noopener noreferrer" 
-                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
-                      {product.competitor_link_1.substring(0, 50)}...
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ) : <span className="text-dark-500">-</span>}
-                </div>
-                <div>
-                  <p className="text-sm text-dark-400 mb-1">Competitor #2</p>
-                  {product?.competitor_link_2 ? (
-                    <a href={product.competitor_link_2} target="_blank" rel="noopener noreferrer" 
-                       className="text-primary-400 hover:text-primary-300 flex items-center gap-1 truncate">
-                      {product.competitor_link_2.substring(0, 50)}...
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ) : <span className="text-dark-500">-</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Product Image */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-white mb-4">Product Image</h3>
-              {product?.product_image_url ? (
-                <div className="space-y-2">
-                  <img 
-                    src={product.product_image_url} 
-                    alt={product.name}
-                    className="w-full max-w-xs rounded-lg border border-dark-600"
-                  />
-                  <a href={product.product_image_url} target="_blank" rel="noopener noreferrer" 
-                     className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-                    Open full image <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              ) : (
-                <div className="text-dark-500 text-center py-8">
-                  <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No product image</p>
-                </div>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-white mb-4">Notes</h3>
-              <textarea
-                value={product?.notes || ''}
-                onChange={(e) => updateProduct?.(id, { notes: e.target.value })}
-                className="input min-h-[150px]"
-                placeholder="Add notes about this product..."
-              />
-            </div>
-
-            {/* Timeline */}
-            <div className="card lg:col-span-2">
-              <h3 className="text-lg font-semibold text-white mb-4">Timeline</h3>
-              <div className="flex items-center gap-6 text-sm">
-                <div>
-                  <span className="text-dark-400">Created:</span>
-                  <span className="text-white ml-2">{formatDate(product?.createdAt)}</span>
-                </div>
-                <div>
-                  <span className="text-dark-400">Last Updated:</span>
-                  <span className="text-white ml-2">{formatDate(product?.updatedAt)}</span>
-                </div>
-                <div>
-                  <span className="text-dark-400">Product ID:</span>
-                  <span className="text-dark-300 ml-2 font-mono text-xs">{product?.id}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'banners' && (
-          <div className="space-y-6">
-            {/* AI Automation Section */}
-            <AutomationProgress 
-              product={product} 
-              onStatusChange={(update) => {
-                console.log('Automation update:', update)
-                // Could trigger a refresh or show notification here
-              }}
-            />
-            
-            {/* Legacy Banners (if any exist from before) */}
-            {productBanners.length > 0 && (
-              <div className="card">
-                <h3 className="text-lg font-semibold text-white mb-4">Previous Banners</h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {productBanners.map((banner, i) => (
-                    <div key={banner?.id || i} className="group relative rounded-lg overflow-hidden bg-dark-800">
-                      {banner?.url ? (
-                        <img
-                          src={banner.url}
-                          alt="Banner"
-                          className="w-full aspect-square object-cover"
-                        />
-                      ) : (
-                        <div className="w-full aspect-square flex items-center justify-center">
-                          <Image className="w-12 h-12 text-dark-600" />
-                        </div>
+                    <p className="text-sm text-dark-500 mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(product?.tags || []).length > 0 ? product.tags.map((tag, i) => (
+                        <motion.span
+                          key={tag || i}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="badge bg-dark-800 text-dark-300 border border-dark-700"
+                        >
+                          <Tag className="w-3 h-3" />
+                          {tag}
+                        </motion.span>
+                      )) : (
+                        <span className="text-dark-600">No tags</span>
                       )}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-                          <Eye className="w-5 h-5 text-white" />
-                        </button>
-                        <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-                          <Download className="w-5 h-5 text-white" />
-                        </button>
-                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Research Links */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="card"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <LinkIcon className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Research Links</h3>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Aliexpress', link: product?.aliexpress_link },
+                    { label: 'Amazon', link: product?.amazon_link },
+                    { label: 'Competitor #1', link: product?.competitor_link_1 },
+                    { label: 'Competitor #2', link: product?.competitor_link_2 },
+                  ].map((item, i) => (
+                    <div key={i}>
+                      <p className="text-sm text-dark-500 mb-1">{item.label}</p>
+                      {item.link ? (
+                        <motion.a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          whileHover={{ x: 2 }}
+                          className="text-primary-400 hover:text-primary-300 flex items-center gap-1 text-sm truncate"
+                        >
+                          {item.link.substring(0, 45)}...
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        </motion.a>
+                      ) : (
+                        <span className="text-dark-600 text-sm">-</span>
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </motion.div>
 
-        {activeTab === 'landing' && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Landing Page</h3>
-              <div className="flex gap-2">
-                <button className="btn btn-secondary">
-                  <Eye className="w-4 h-4" />
-                  Preview
-                </button>
-                <button className="btn btn-primary">
-                  <Zap className="w-4 h-4" />
-                  Generate
-                </button>
-              </div>
+              {/* Product Image */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="card"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                    <Image className="w-5 h-5 text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Product Image</h3>
+                </div>
+                {product?.product_image_url ? (
+                  <div className="space-y-3">
+                    <motion.img
+                      src={product.product_image_url}
+                      alt={product.name}
+                      whileHover={{ scale: 1.02 }}
+                      className="w-full max-w-xs rounded-xl border border-dark-700 shadow-lg"
+                    />
+                    <a
+                      href={product.product_image_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                    >
+                      Open full image <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-center py-10 border-2 border-dashed border-dark-800 rounded-xl">
+                    <Image className="w-12 h-12 mx-auto mb-2 text-dark-700" />
+                    <p className="text-dark-600">No product image</p>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Notes */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="card"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Notes</h3>
+                </div>
+                <textarea
+                  value={product?.notes || ''}
+                  onChange={(e) => updateProduct?.(id, { notes: e.target.value })}
+                  className="input min-h-[150px] resize-none"
+                  placeholder="Add notes about this product..."
+                />
+              </motion.div>
+
+              {/* Timeline */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="card lg:col-span-2"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-dark-800 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-dark-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Timeline</h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-dark-500">Created:</span>
+                    <span className="text-white">{formatDate(product?.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-dark-500">Updated:</span>
+                    <span className="text-white">{formatDate(product?.updatedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-dark-500">ID:</span>
+                    <code className="text-dark-400 text-xs bg-dark-800 px-2 py-1 rounded">{product?.id}</code>
+                  </div>
+                </div>
+              </motion.div>
             </div>
+          )}
 
-            <div className={`p-3 rounded-lg mb-4 ${
-              productLandingPage.status === 'ready' ? 'bg-green-500/10 border border-green-500/30' :
-              productLandingPage.status === 'generating' ? 'bg-yellow-500/10 border border-yellow-500/30' :
-              'bg-dark-800 border border-dark-600'
-            }`}>
-              <p className={`text-sm ${
-                productLandingPage.status === 'ready' ? 'text-green-400' :
-                productLandingPage.status === 'generating' ? 'text-yellow-400' :
-                'text-dark-400'
-              }`}>
-                Status: {productLandingPage.status === 'ready' ? '✅ Ready' :
-                        productLandingPage.status === 'generating' ? '⏳ Generating...' :
-                        '⏸️ Pending'}
-              </p>
+          {activeTab === 'banners' && (
+            <div className="space-y-6">
+              <AutomationProgress
+                product={product}
+                onStatusChange={(update) => console.log('Automation update:', update)}
+              />
+              
+              {productBanners.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="card"
+                >
+                  <h3 className="text-lg font-semibold text-white mb-4">Previous Banners</h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {productBanners.map((banner, i) => (
+                      <motion.div
+                        key={banner?.id || i}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        whileHover={{ scale: 1.02 }}
+                        className="group relative rounded-xl overflow-hidden bg-dark-800 border border-dark-700"
+                      >
+                        {banner?.url ? (
+                          <img src={banner.url} alt="Banner" className="w-full aspect-square object-cover" />
+                        ) : (
+                          <div className="w-full aspect-square flex items-center justify-center">
+                            <Image className="w-12 h-12 text-dark-700" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2.5 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20"
+                          >
+                            <Eye className="w-5 h-5 text-white" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2.5 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20"
+                          >
+                            <Download className="w-5 h-5 text-white" />
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
+          )}
 
-            {productLandingPage.html ? (
-              <div className="bg-dark-800 rounded-lg p-4">
-                <pre className="text-xs text-dark-300 overflow-x-auto">
-                  {productLandingPage.html.substring(0, 500)}...
-                </pre>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-dark-400">
-                <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>No landing page content yet</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'activity' && (
-          <div className="card">
-            <h3 className="text-lg font-semibold text-white mb-4">Activity Log</h3>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="w-2 h-2 rounded-full bg-primary-500 mt-2" />
-                <div>
-                  <p className="text-white">Product created</p>
-                  <p className="text-sm text-dark-400">{formatDate(productCreatedAt)}</p>
+          {activeTab === 'landing' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Landing Page</h3>
+                </div>
+                <div className="flex gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="btn btn-secondary"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
+                    whileTap={{ scale: 0.98 }}
+                    className="btn btn-primary"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Generate
+                  </motion.button>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
-                <div>
-                  <p className="text-white">Last updated</p>
-                  <p className="text-sm text-dark-400">{formatDate(productUpdatedAt)}</p>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`p-4 rounded-xl mb-6 ${
+                  productLandingPage.status === 'ready'
+                    ? 'bg-green-500/10 border border-green-500/30'
+                    : productLandingPage.status === 'generating'
+                    ? 'bg-yellow-500/10 border border-yellow-500/30'
+                    : 'bg-dark-800/50 border border-dark-700'
+                }`}
+              >
+                <p className={`text-sm font-medium ${
+                  productLandingPage.status === 'ready'
+                    ? 'text-green-400'
+                    : productLandingPage.status === 'generating'
+                    ? 'text-yellow-400'
+                    : 'text-dark-500'
+                }`}>
+                  Status: {productLandingPage.status === 'ready'
+                    ? '✅ Ready'
+                    : productLandingPage.status === 'generating'
+                    ? '⏳ Generating...'
+                    : '⏸️ Pending'}
+                </p>
+              </motion.div>
+
+              {productLandingPage.html ? (
+                <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700">
+                  <pre className="text-xs text-dark-400 overflow-x-auto font-mono">
+                    {productLandingPage.html.substring(0, 500)}...
+                  </pre>
                 </div>
+              ) : (
+                <div className="text-center py-16 border-2 border-dashed border-dark-800 rounded-xl">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-dark-700" />
+                  <p className="text-dark-600">No landing page content yet</p>
+                  <p className="text-sm text-dark-700 mt-1">Click Generate to create one</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'activity' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-purple-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Activity Log</h3>
               </div>
-            </div>
-          </div>
-        )}
-      </div>
+              <div className="space-y-6">
+                {[
+                  { color: 'bg-green-500', label: 'Product created', date: product?.createdAt },
+                  { color: 'bg-blue-500', label: 'Last updated', date: product?.updatedAt },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="flex gap-4"
+                  >
+                    <div className="flex flex-col items-center">
+                      <motion.div
+                        whileHover={{ scale: 1.2 }}
+                        className={`w-3 h-3 rounded-full ${item.color}`}
+                      />
+                      {i < 1 && <div className="w-px h-full bg-dark-800 my-2" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{item.label}</p>
+                      <p className="text-sm text-dark-500">{formatDate(item.date)}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Edit Modal */}
-      {isEditing && (
-        <EditProductModal
-          product={product}
-          onClose={() => setIsEditing(false)}
-          onSave={(updates) => { 
-            updateProduct?.(id, updates)
-            setIsEditing(false) 
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {isEditing && (
+          <EditProductModal
+            product={product}
+            onClose={() => setIsEditing(false)}
+            onSave={(updates) => {
+              updateProduct?.(id, updates)
+              setIsEditing(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -561,7 +765,6 @@ function EditProductModal({ product, onClose, onSave }) {
     targetAudience: product?.targetAudience || '',
     price: String(product?.price || ''),
     tags: (product?.tags || []).join(', '),
-    // n8n workflow fields
     language: product?.language || 'English',
     country: product?.country || 'United States',
     gender: product?.gender || 'All',
@@ -577,15 +780,12 @@ function EditProductModal({ product, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
     if (!formData.name.trim()) {
       setError('Product name is required')
       return
     }
-    
     setSubmitting(true)
     setError('')
-    
     try {
       await onSave({
         name: formData.name.trim(),
@@ -595,7 +795,6 @@ function EditProductModal({ product, onClose, onSave }) {
         targetAudience: formData.targetAudience.trim(),
         price: parseFloat(formData.price) || 0,
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        // n8n workflow fields
         language: formData.language,
         country: formData.country,
         gender: formData.gender,
@@ -613,23 +812,63 @@ function EditProductModal({ product, onClose, onSave }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="relative bg-dark-900/95 backdrop-blur-xl border border-dark-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Edit Product</h2>
-          <button onClick={onClose} className="text-dark-400 hover:text-white" disabled={submitting}>
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', bounce: 0.5 }}
+              className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center"
+            >
+              <Edit className="w-5 h-5 text-blue-400" />
+            </motion.div>
+            <h2 className="text-xl font-bold text-white">Edit Product</h2>
+          </div>
+          <motion.button
+            onClick={onClose}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl transition-colors"
+            disabled={submitting}
+          >
             <X className="w-5 h-5" />
-          </button>
+          </motion.button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">Product Name *</label>
@@ -648,7 +887,7 @@ function EditProductModal({ product, onClose, onSave }) {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input min-h-[80px]"
+              className="input min-h-[80px] resize-none"
               disabled={submitting}
             />
           </div>
@@ -707,7 +946,6 @@ function EditProductModal({ product, onClose, onSave }) {
                 <option value="Canada">🇨🇦 Canada</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Language</label>
               <select
@@ -723,7 +961,6 @@ function EditProductModal({ product, onClose, onSave }) {
                 <option value="French">French</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Target Gender</label>
               <select
@@ -746,123 +983,129 @@ function EditProductModal({ product, onClose, onSave }) {
               value={formData.product_image_url}
               onChange={(e) => setFormData({ ...formData, product_image_url: e.target.value })}
               className="input"
-              placeholder="https://example.com/product-image.jpg"
+              placeholder="https://example.com/image.jpg"
               disabled={submitting}
             />
-            <p className="text-xs text-dark-500 mt-1">Used for banner generation</p>
           </div>
 
-          {/* Collapsible Advanced Section */}
-          <div className="border border-dark-700 rounded-lg">
-            <button
+          {/* Advanced Section */}
+          <div className="border border-dark-700 rounded-xl overflow-hidden">
+            <motion.button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between p-3 text-left text-dark-300 hover:text-white transition-colors"
+              whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.3)' }}
+              className="w-full flex items-center justify-between p-4 text-left text-dark-400 hover:text-white transition-colors"
             >
               <span className="text-sm font-medium">Research Links & More</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-            </button>
+              <motion.div animate={{ rotate: showAdvanced ? 180 : 0 }}>
+                <ChevronDown className="w-4 h-4" />
+              </motion.div>
+            </motion.button>
             
-            {showAdvanced && (
-              <div className="p-3 pt-0 space-y-3 border-t border-dark-700">
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
-                  <input
-                    type="url"
-                    value={formData.aliexpress_link}
-                    onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
-                    className="input"
-                    placeholder="https://aliexpress.com/item/..."
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
-                  <input
-                    type="url"
-                    value={formData.amazon_link}
-                    onChange={(e) => setFormData({ ...formData, amazon_link: e.target.value })}
-                    className="input"
-                    placeholder="https://amazon.com/dp/..."
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #1</label>
-                  <input
-                    type="url"
-                    value={formData.competitor_link_1}
-                    onChange={(e) => setFormData({ ...formData, competitor_link_1: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Competitor Link #2</label>
-                  <input
-                    type="url"
-                    value={formData.competitor_link_2}
-                    onChange={(e) => setFormData({ ...formData, competitor_link_2: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
-                  <input
-                    type="text"
-                    value={formData.targetAudience}
-                    onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-                    className="input"
-                    placeholder="e.g., Women 35+"
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Market</label>
-                  <select
-                    value={formData.market}
-                    onChange={(e) => setFormData({ ...formData, market: e.target.value })}
-                    className="input"
-                    disabled={submitting}
-                  >
-                    <option value="US">🇺🇸 United States</option>
-                    <option value="Israel">🇮🇱 Israel</option>
-                    <option value="UK">🇬🇧 United Kingdom</option>
-                    <option value="EU">🇪🇺 Europe</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    className="input"
-                    placeholder="e.g., trending, tech, high-margin"
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 pt-0 space-y-4 border-t border-dark-700">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
+                        <input
+                          type="url"
+                          value={formData.aliexpress_link}
+                          onChange={(e) => setFormData({ ...formData, aliexpress_link: e.target.value })}
+                          className="input"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Amazon Link</label>
+                        <input
+                          type="url"
+                          value={formData.amazon_link}
+                          onChange={(e) => setFormData({ ...formData, amazon_link: e.target.value })}
+                          className="input"
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #1</label>
+                        <input
+                          type="url"
+                          value={formData.competitor_link_1}
+                          onChange={(e) => setFormData({ ...formData, competitor_link_1: e.target.value })}
+                          className="input"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #2</label>
+                        <input
+                          type="url"
+                          value={formData.competitor_link_2}
+                          onChange={(e) => setFormData({ ...formData, competitor_link_2: e.target.value })}
+                          className="input"
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Target Audience</label>
+                      <input
+                        type="text"
+                        value={formData.targetAudience}
+                        onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                        className="input"
+                        disabled={submitting}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-2">Tags (comma-separated)</label>
+                      <input
+                        type="text"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        className="input"
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1" disabled={submitting}>
+            <motion.button
+              type="button"
+              onClick={onClose}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-secondary flex-1"
+              disabled={submitting}
+            >
               Cancel
-            </button>
-            <button type="submit" className="btn btn-primary flex-1" disabled={submitting}>
+            </motion.button>
+            <motion.button
+              type="submit"
+              whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.4)' }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-primary flex-1"
+              disabled={submitting}
+            >
               {submitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
                   Saving...
                 </>
               ) : (
@@ -871,11 +1114,11 @@ function EditProductModal({ product, onClose, onSave }) {
                   Save Changes
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body
   )
 }
