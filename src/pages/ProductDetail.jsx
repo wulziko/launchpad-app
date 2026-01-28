@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
+import AutomationProgress from '../components/AutomationProgress'
 import {
   ArrowLeft,
   Edit,
@@ -19,7 +20,8 @@ import {
   Download,
   Eye,
   ChevronDown,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react'
 
 export default function ProductDetail() {
@@ -307,49 +309,45 @@ export default function ProductDetail() {
         )}
 
         {activeTab === 'banners' && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Generated Banners</h3>
-              <button className="btn btn-secondary">
-                <Zap className="w-4 h-4" />
-                Generate More
-              </button>
-            </div>
-
-            {productBanners.length === 0 ? (
-              <div className="text-center py-12 text-dark-400">
-                <Image className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p className="mb-4">No banners generated yet</p>
-                <button className="btn btn-primary">
-                  <Zap className="w-4 h-4" />
-                  Start Banner Generation
-                </button>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productBanners.map((banner, i) => (
-                  <div key={banner?.id || i} className="group relative rounded-lg overflow-hidden bg-dark-800">
-                    {banner?.url ? (
-                      <img
-                        src={banner.url}
-                        alt="Banner"
-                        className="w-full aspect-square object-cover"
-                      />
-                    ) : (
-                      <div className="w-full aspect-square flex items-center justify-center">
-                        <Image className="w-12 h-12 text-dark-600" />
+          <div className="space-y-6">
+            {/* AI Automation Section */}
+            <AutomationProgress 
+              product={product} 
+              onStatusChange={(update) => {
+                console.log('Automation update:', update)
+                // Could trigger a refresh or show notification here
+              }}
+            />
+            
+            {/* Legacy Banners (if any exist from before) */}
+            {productBanners.length > 0 && (
+              <div className="card">
+                <h3 className="text-lg font-semibold text-white mb-4">Previous Banners</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {productBanners.map((banner, i) => (
+                    <div key={banner?.id || i} className="group relative rounded-lg overflow-hidden bg-dark-800">
+                      {banner?.url ? (
+                        <img
+                          src={banner.url}
+                          alt="Banner"
+                          className="w-full aspect-square object-cover"
+                        />
+                      ) : (
+                        <div className="w-full aspect-square flex items-center justify-center">
+                          <Image className="w-12 h-12 text-dark-600" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+                          <Eye className="w-5 h-5 text-white" />
+                        </button>
+                        <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+                          <Download className="w-5 h-5 text-white" />
+                        </button>
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-                        <Eye className="w-5 h-5 text-white" />
-                      </button>
-                      <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-                        <Download className="w-5 h-5 text-white" />
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
