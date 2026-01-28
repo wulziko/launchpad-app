@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { PageLoading } from '../components/LoadingSpinner'
 import {
   Package,
   TrendingUp,
@@ -8,35 +9,66 @@ import {
   Clock,
   ArrowRight,
   Plus,
-  Play,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react'
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const { products, automations, getStats, STATUSES } = useData()
-  const stats = getStats()
+  const { products, automations, getStats, STATUSES, loading, error } = useData()
+  
+  // Safe stats with defaults
+  const stats = getStats?.() || { total: 0, inProgress: 0, ready: 0, live: 0 }
 
-  // Get recent products
-  const recentProducts = [...products]
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+  // Safe array operations
+  const safeProducts = products || []
+  const safeAutomations = automations || []
+  const safeStatuses = STATUSES || []
+
+  // Get recent products with safety checks
+  const recentProducts = [...safeProducts]
+    .filter(p => p && p.updatedAt)
+    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
     .slice(0, 5)
 
   // Get in-progress products
-  const inProgressProducts = products.filter(p => 
-    ['banner_generation', 'landing_page', 'review'].includes(p.status)
+  const inProgressProducts = safeProducts.filter(p => 
+    p && ['banner_gen', 'landing_page', 'review'].includes(p.status)
   )
 
-  const getStatusInfo = (statusId) => STATUSES.find(s => s.id === statusId)
+  const getStatusInfo = (statusId) => safeStatuses.find(s => s?.id === statusId) || {}
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    if (!date) return '-'
+    try {
+      return new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return '-'
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return <PageLoading message="Loading dashboard..." />
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Failed to load dashboard</h2>
+        <p className="text-dark-400 mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
+          Try Again
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -45,7 +77,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            Welcome back, {user?.name} 👋
+            Welcome back, {user?.name || 'there'} 👋
           </h1>
           <p className="text-dark-400 mt-1">
             Here's what's happening with your products today.
@@ -65,7 +97,7 @@ export default function Dashboard() {
               <Package className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">{stats.total}</p>
+              <p className="text-3xl font-bold text-white">{stats.total || 0}</p>
               <p className="text-sm text-dark-400">Total Products</p>
             </div>
           </div>
@@ -77,7 +109,7 @@ export default function Dashboard() {
               <Clock className="w-6 h-6 text-yellow-400" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">{stats.inProgress}</p>
+              <p className="text-3xl font-bold text-white">{stats.inProgress || 0}</p>
               <p className="text-sm text-dark-400">In Progress</p>
             </div>
           </div>
@@ -89,7 +121,7 @@ export default function Dashboard() {
               <CheckCircle2 className="w-6 h-6 text-green-400" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">{stats.ready}</p>
+              <p className="text-3xl font-bold text-white">{stats.ready || 0}</p>
               <p className="text-sm text-dark-400">Ready to Launch</p>
             </div>
           </div>
@@ -101,7 +133,7 @@ export default function Dashboard() {
               <TrendingUp className="w-6 h-6 text-primary-400" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">{stats.live}</p>
+              <p className="text-3xl font-bold text-white">{stats.live || 0}</p>
               <p className="text-sm text-dark-400">Live Products</p>
             </div>
           </div>
@@ -125,7 +157,8 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {inProgressProducts.map((product) => {
+              {inProgressProducts.slice(0, 5).map((product) => {
+                if (!product) return null
                 const statusInfo = getStatusInfo(product.status)
                 return (
                   <Link
@@ -138,12 +171,12 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-white truncate group-hover:text-primary-400 transition-colors">
-                        {product.name}
+                        {product.name || 'Untitled'}
                       </p>
-                      <p className="text-sm text-dark-400">{product.market} • {product.niche}</p>
+                      <p className="text-sm text-dark-400">{product.market || '-'} • {product.niche || '-'}</p>
                     </div>
-                    <span className={`badge ${statusInfo?.color} ${statusInfo?.textColor}`}>
-                      {statusInfo?.label}
+                    <span className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'}`}>
+                      {statusInfo?.label || product.status || 'Unknown'}
                     </span>
                   </Link>
                 )
@@ -161,31 +194,46 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {automations.slice(0, 4).map((automation) => (
-              <div
-                key={automation.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-dark-800/50"
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  automation.status === 'active' ? 'bg-green-500/10' : 'bg-dark-700'
-                }`}>
-                  <Zap className={`w-5 h-5 ${
-                    automation.status === 'active' ? 'text-green-400' : 'text-dark-400'
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{automation.name}</p>
-                  <p className="text-sm text-dark-400">
-                    {automation.runsToday} runs today • Last: {formatDate(automation.lastRun)}
-                  </p>
-                </div>
-                <div className={`w-2 h-2 rounded-full ${
-                  automation.status === 'active' ? 'bg-green-400' : 'bg-dark-500'
-                }`} />
-              </div>
-            ))}
-          </div>
+          {safeAutomations.length === 0 ? (
+            <div className="text-center py-8 text-dark-400">
+              <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No automations configured</p>
+              <Link to="/automations" className="btn btn-secondary mt-4">
+                Add Automation
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {safeAutomations.slice(0, 4).map((automation) => {
+                if (!automation) return null
+                const isActive = automation.is_active || automation.status === 'active'
+                return (
+                  <div
+                    key={automation.id}
+                    className="flex items-center gap-4 p-3 rounded-lg bg-dark-800/50"
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isActive ? 'bg-green-500/10' : 'bg-dark-700'
+                    }`}>
+                      <Zap className={`w-5 h-5 ${
+                        isActive ? 'text-green-400' : 'text-dark-400'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{automation.name || 'Unnamed'}</p>
+                      <p className="text-sm text-dark-400">
+                        {automation.run_count || automation.runsToday || 0} runs • 
+                        Last: {formatDate(automation.last_run_at || automation.lastRun)}
+                      </p>
+                    </div>
+                    <div className={`w-2 h-2 rounded-full ${
+                      isActive ? 'bg-green-400' : 'bg-dark-500'
+                    }`} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -198,45 +246,56 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm text-dark-400 border-b border-dark-700">
-                <th className="pb-3 font-medium">Product</th>
-                <th className="pb-3 font-medium">Market</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentProducts.map((product) => {
-                const statusInfo = getStatusInfo(product.status)
-                return (
-                  <tr key={product.id} className="border-b border-dark-800 last:border-0">
-                    <td className="py-3">
-                      <Link to={`/products/${product.id}`} className="flex items-center gap-3 hover:text-primary-400 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center text-sm">
-                          📦
-                        </div>
-                        <div>
-                          <p className="font-medium text-white">{product.name}</p>
-                          <p className="text-xs text-dark-400">{product.niche}</p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="py-3 text-dark-300">{product.market}</td>
-                    <td className="py-3">
-                      <span className={`badge ${statusInfo?.color} ${statusInfo?.textColor}`}>
-                        {statusInfo?.label}
-                      </span>
-                    </td>
-                    <td className="py-3 text-sm text-dark-400">{formatDate(product.updatedAt)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        {recentProducts.length === 0 ? (
+          <div className="text-center py-8 text-dark-400">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No products yet</p>
+            <Link to="/products" className="btn btn-primary mt-4">
+              Add Your First Product
+            </Link>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm text-dark-400 border-b border-dark-700">
+                  <th className="pb-3 font-medium">Product</th>
+                  <th className="pb-3 font-medium">Market</th>
+                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentProducts.map((product) => {
+                  if (!product) return null
+                  const statusInfo = getStatusInfo(product.status)
+                  return (
+                    <tr key={product.id} className="border-b border-dark-800 last:border-0">
+                      <td className="py-3">
+                        <Link to={`/products/${product.id}`} className="flex items-center gap-3 hover:text-primary-400 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center text-sm">
+                            📦
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{product.name || 'Untitled'}</p>
+                            <p className="text-xs text-dark-400">{product.niche || '-'}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="py-3 text-dark-300">{product.market || '-'}</td>
+                      <td className="py-3">
+                        <span className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'}`}>
+                          {statusInfo?.label || product.status || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-sm text-dark-400">{formatDate(product.updatedAt)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

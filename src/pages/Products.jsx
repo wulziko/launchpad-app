@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
+import { PageLoading, CardSkeleton } from '../components/LoadingSpinner'
+import EmptyState from '../components/EmptyState'
 import {
   Plus,
   LayoutGrid,
@@ -11,28 +13,88 @@ import {
   MoreVertical,
   ExternalLink,
   Trash2,
-  Edit,
   ChevronRight,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react'
 
 export default function Products() {
-  const [view, setView] = useState('kanban') // 'kanban' or 'list'
+  const [view, setView] = useState('kanban')
   const [showNewModal, setShowNewModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const { products, STATUSES, updateProductStatus, addProduct, deleteProduct } = useData()
+  const { products, STATUSES, updateProductStatus, addProduct, deleteProduct, loading, error } = useData()
 
-  const filteredProducts = (products || []).filter(p =>
-    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.niche?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Safe filtering with null checks
+  const filteredProducts = (products || []).filter(p => {
+    if (!p) return false
+    const name = p.name?.toLowerCase() || ''
+    const niche = p.niche?.toLowerCase() || ''
+    const query = searchQuery.toLowerCase()
+    return name.includes(query) || niche.includes(query)
+  })
 
   const getProductsByStatus = (statusId) => {
-    return filteredProducts.filter(p => p.status === statusId)
+    return filteredProducts.filter(p => p?.status === statusId)
   }
 
-  const handleStatusChange = (productId, newStatus) => {
-    updateProductStatus(productId, newStatus)
+  const handleStatusChange = async (productId, newStatus) => {
+    try {
+      await updateProductStatus(productId, newStatus)
+    } catch (err) {
+      console.error('Failed to update status:', err)
+      // TODO: Show toast notification
+    }
+  }
+
+  const handleDelete = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return
+    try {
+      await deleteProduct(productId)
+    } catch (err) {
+      console.error('Failed to delete product:', err)
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-8 bg-dark-700 rounded w-32 mb-2 animate-pulse" />
+            <div className="h-4 bg-dark-700 rounded w-64 animate-pulse" />
+          </div>
+          <div className="h-10 bg-dark-700 rounded w-32 animate-pulse" />
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="flex-shrink-0 w-72">
+              <div className="bg-dark-900 rounded-xl border border-dark-700 p-4">
+                <div className="h-6 bg-dark-700 rounded w-32 mb-4 animate-pulse" />
+                <div className="space-y-3">
+                  <CardSkeleton />
+                  <CardSkeleton />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Failed to load products</h2>
+        <p className="text-dark-400 mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
+          Try Again
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -85,19 +147,37 @@ export default function Products() {
         </div>
       </div>
 
+      {/* Empty state */}
+      {filteredProducts.length === 0 && !searchQuery && (
+        <EmptyState
+          type="products"
+          title="No products yet"
+          description="Add your first product to start managing your pipeline."
+          action={() => setShowNewModal(true)}
+          actionLabel="Add Product"
+        />
+      )}
+
+      {/* No search results */}
+      {filteredProducts.length === 0 && searchQuery && (
+        <div className="text-center py-12">
+          <p className="text-dark-400">No products match "{searchQuery}"</p>
+        </div>
+      )}
+
       {/* Kanban View */}
-      {view === 'kanban' && (
+      {view === 'kanban' && filteredProducts.length > 0 && (
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {STATUSES.map((status) => {
-            const statusProducts = getProductsByStatus(status.id)
+          {(STATUSES || []).map((status) => {
+            const statusProducts = getProductsByStatus(status?.id)
             return (
-              <div key={status.id} className="flex-shrink-0 w-72">
+              <div key={status?.id || Math.random()} className="flex-shrink-0 w-72">
                 <div className="bg-dark-900 rounded-xl border border-dark-700 p-4">
                   {/* Column Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className={`w-3 h-3 rounded-full ${status.color}`} />
-                      <h3 className="font-semibold text-white">{status.label}</h3>
+                      <span className={`w-3 h-3 rounded-full ${status?.color || 'bg-dark-600'}`} />
+                      <h3 className="font-semibold text-white">{status?.label || 'Unknown'}</h3>
                       <span className="text-sm text-dark-400">({statusProducts.length})</span>
                     </div>
                   </div>
@@ -106,11 +186,11 @@ export default function Products() {
                   <div className="space-y-3">
                     {statusProducts.map((product) => (
                       <ProductCard
-                        key={product.id}
+                        key={product?.id || Math.random()}
                         product={product}
-                        statuses={STATUSES}
+                        statuses={STATUSES || []}
                         onStatusChange={handleStatusChange}
-                        onDelete={deleteProduct}
+                        onDelete={handleDelete}
                       />
                     ))}
 
@@ -128,7 +208,7 @@ export default function Products() {
       )}
 
       {/* List View */}
-      {view === 'list' && (
+      {view === 'list' && filteredProducts.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full">
             <thead>
@@ -143,7 +223,8 @@ export default function Products() {
             </thead>
             <tbody>
               {filteredProducts.map((product) => {
-                const statusInfo = STATUSES.find(s => s.id === product.status)
+                if (!product) return null
+                const statusInfo = (STATUSES || []).find(s => s?.id === product?.status)
                 return (
                   <tr key={product.id} className="border-b border-dark-800 last:border-0 hover:bg-dark-800/50 transition-colors">
                     <td className="py-4 pl-4">
@@ -152,19 +233,19 @@ export default function Products() {
                           📦
                         </div>
                         <div>
-                          <p className="font-medium text-white">{product.name}</p>
-                          <p className="text-xs text-dark-400 mt-0.5 max-w-xs truncate">{product.description}</p>
+                          <p className="font-medium text-white">{product.name || 'Untitled'}</p>
+                          <p className="text-xs text-dark-400 mt-0.5 max-w-xs truncate">{product.description || ''}</p>
                         </div>
                       </Link>
                     </td>
-                    <td className="py-4 text-dark-300">{product.market}</td>
-                    <td className="py-4 text-dark-300">{product.niche}</td>
+                    <td className="py-4 text-dark-300">{product.market || '-'}</td>
+                    <td className="py-4 text-dark-300">{product.niche || '-'}</td>
                     <td className="py-4">
-                      <span className={`badge ${statusInfo?.color} ${statusInfo?.textColor}`}>
-                        {statusInfo?.label}
+                      <span className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'}`}>
+                        {statusInfo?.label || product.status || 'Unknown'}
                       </span>
                     </td>
-                    <td className="py-4 text-dark-300">${product.price}</td>
+                    <td className="py-4 text-dark-300">${product.price || 0}</td>
                     <td className="py-4 pr-4">
                       <Link to={`/products/${product.id}`} className="btn btn-ghost p-2">
                         <ChevronRight className="w-5 h-5" />
@@ -192,13 +273,17 @@ export default function Products() {
 function ProductCard({ product, statuses, onStatusChange, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
-  const statusInfo = statuses.find(s => s.id === product.status)
+  
+  // Safety check
+  if (!product) return null
+  
+  const statusInfo = (statuses || []).find(s => s?.id === product?.status) || {}
 
   return (
     <div className="bg-dark-800 rounded-lg p-4 hover:bg-dark-750 transition-colors group">
       <div className="flex items-start justify-between mb-2">
         <Link to={`/products/${product.id}`} className="font-medium text-white hover:text-primary-400 transition-colors">
-          {product.name}
+          {product.name || 'Untitled Product'}
         </Link>
         <div className="relative">
           <button
@@ -231,37 +316,37 @@ function ProductCard({ product, statuses, onStatusChange, onDelete }) {
         </div>
       </div>
 
-      <p className="text-sm text-dark-400 mb-3 line-clamp-2">{product.description}</p>
+      <p className="text-sm text-dark-400 mb-3 line-clamp-2">{product.description || 'No description'}</p>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-dark-400">
-          <span>{product.market}</span>
+          <span>{product.market || '-'}</span>
           <span>•</span>
-          <span>${product.price}</span>
+          <span>${product.price || 0}</span>
         </div>
         
         {/* Status Dropdown */}
         <div className="relative">
           <button
             onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-            className={`badge ${statusInfo?.color} ${statusInfo?.textColor} cursor-pointer hover:opacity-80 transition-opacity`}
+            className={`badge ${statusInfo?.color || 'bg-dark-600'} ${statusInfo?.textColor || 'text-dark-300'} cursor-pointer hover:opacity-80 transition-opacity`}
           >
-            {statusInfo?.label}
+            {statusInfo?.label || product.status || 'Unknown'}
           </button>
           {statusMenuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
               <div className="absolute right-0 top-full mt-1 z-20 bg-dark-700 border border-dark-600 rounded-lg shadow-xl py-1 min-w-[160px]">
-                {statuses.map((status) => (
+                {(statuses || []).map((status) => (
                   <button
-                    key={status.id}
-                    onClick={() => { onStatusChange(product.id, status.id); setStatusMenuOpen(false) }}
+                    key={status?.id || Math.random()}
+                    onClick={() => { onStatusChange(product.id, status?.id); setStatusMenuOpen(false) }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-dark-600 ${
-                      product.status === status.id ? 'text-primary-400' : 'text-dark-200'
+                      product?.status === status?.id ? 'text-primary-400' : 'text-dark-200'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${status.color}`} />
-                    {status.label}
+                    <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
+                    {status?.label || 'Unknown'}
                   </button>
                 ))}
               </div>
@@ -273,8 +358,8 @@ function ProductCard({ product, statuses, onStatusChange, onDelete }) {
       {/* Tags */}
       {product.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
-          {product.tags?.map(tag => (
-            <span key={tag} className="text-xs px-2 py-0.5 bg-dark-700 text-dark-300 rounded">
+          {product.tags.map((tag, index) => (
+            <span key={tag || index} className="text-xs px-2 py-0.5 bg-dark-700 text-dark-300 rounded">
               {tag}
             </span>
           ))}
@@ -294,44 +379,54 @@ function NewProductModal({ onClose, onAdd }) {
     price: '',
     tags: '',
   })
-
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validation
+    if (!formData.name.trim()) {
+      setError('Product name is required')
+      return
+    }
+    
     setSubmitting(true)
     setError('')
     
     try {
       await onAdd({
         ...formData,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        niche: formData.niche.trim(),
         price: parseFloat(formData.price) || 0,
-        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       })
       onClose()
     } catch (err) {
-      setError(err.message || 'Failed to add product')
+      console.error('Error adding product:', err)
+      setError(err.message || 'Failed to add product. Please try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
-  // Use createPortal to render at document.body level (avoids transform stacking context issues)
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-dark-900 border border-dark-700 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fadeIn">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Add New Product</h2>
-          <button onClick={onClose} className="text-dark-400 hover:text-white">
+          <button onClick={onClose} className="text-dark-400 hover:text-white" disabled={submitting}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
           )}
@@ -345,27 +440,29 @@ function NewProductModal({ onClose, onAdd }) {
               className="input"
               placeholder="e.g., Smart Posture Corrector"
               required
+              disabled={submitting}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Description *</label>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="input min-h-[100px]"
               placeholder="Brief description of the product..."
-              required
+              disabled={submitting}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Market *</label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Market</label>
               <select
                 value={formData.market}
                 onChange={(e) => setFormData({ ...formData, market: e.target.value })}
                 className="input"
+                disabled={submitting}
               >
                 <option value="US">🇺🇸 United States</option>
                 <option value="Israel">🇮🇱 Israel</option>
@@ -375,28 +472,29 @@ function NewProductModal({ onClose, onAdd }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Price ($) *</label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Price ($)</label>
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className="input"
                 placeholder="49.99"
-                required
+                disabled={submitting}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">Niche *</label>
+            <label className="block text-sm font-medium text-dark-300 mb-2">Niche</label>
             <input
               type="text"
               value={formData.niche}
               onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
               className="input"
               placeholder="e.g., Health & Wellness"
-              required
+              disabled={submitting}
             />
           </div>
 
@@ -408,6 +506,7 @@ function NewProductModal({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
               className="input"
               placeholder="e.g., Women 35+"
+              disabled={submitting}
             />
           </div>
 
@@ -419,6 +518,7 @@ function NewProductModal({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               className="input"
               placeholder="e.g., trending, tech, high-margin"
+              disabled={submitting}
             />
           </div>
 
