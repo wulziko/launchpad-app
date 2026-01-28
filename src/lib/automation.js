@@ -5,9 +5,9 @@
 
 import { supabase } from './supabase'
 
-// n8n webhook configuration
-const N8N_BASE_URL = 'https://n8n.srv1300789.hstgr.cloud'
-const N8N_WEBHOOK_PATH = '/webhook/launchpad-banner-gen'
+// API proxy endpoint (avoids CORS issues)
+// Uses Vercel serverless function to proxy to n8n
+const BANNER_API_URL = '/api/trigger-banners'
 
 /**
  * Trigger n8n workflow for a product
@@ -56,8 +56,8 @@ export const triggerBannerGeneration = async (product) => {
       supabase_project_ref: 'rxtcssesqwooggydfkvs',
     }
 
-    // Trigger n8n webhook
-    const response = await fetch(`${N8N_BASE_URL}${N8N_WEBHOOK_PATH}`, {
+    // Trigger banner generation via API proxy (avoids CORS)
+    const response = await fetch(BANNER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
