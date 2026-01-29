@@ -25,7 +25,20 @@ export const triggerBannerGeneration = async (product) => {
     })
 
     // Prepare payload for n8n webhook
-    // Matches the expected format in /api/trigger-banners.js
+    // IMPORTANT: metadata fields take priority since that's where the real data is stored
+    const meta = product.metadata || {}
+    
+    // Debug: log what we're sending
+    console.log('[automation] Building payload from product:', {
+      id: product.id,
+      name: product.name,
+      'meta.language': meta.language,
+      'product.language': product.language,
+      'meta.product_image_url': meta.product_image_url,
+      'product.product_image_url': product.product_image_url,
+      'meta.amazon_link': meta.amazon_link,
+    })
+    
     const payload = {
       // Required identifiers
       id: product.id,
@@ -34,22 +47,22 @@ export const triggerBannerGeneration = async (product) => {
       
       // Core product info
       description: product.description || '',
-      niche: product.niche || '',
+      niche: product.niche || meta.niche || '',
       
-      // Localization - match LaunchPad database schema
-      language: product.language || product.metadata?.language || 'English',
-      country: product.country || product.metadata?.country || 'US',
-      gender: product.gender || product.metadata?.gender || 'All',
-      target_market: product.target_market || product.country || 'US',
+      // Localization - METADATA FIRST (main columns often have defaults/nulls)
+      language: meta.language || product.language || 'English',
+      country: meta.country || product.country || 'US',
+      gender: meta.gender || product.gender || 'All',
+      target_market: meta.country || product.target_market || product.country || 'US',
       
-      // Research links - match LaunchPad database field names
-      source_url: product.source_url || product.supplier_url || product.metadata?.aliexpress_link || '',
-      amazon_link: product.amazon_link || product.metadata?.amazon_link || '',
-      competitor_link_1: product.competitor_link_1 || product.metadata?.competitor_link_1 || '',
-      competitor_link_2: product.competitor_link_2 || product.metadata?.competitor_link_2 || '',
+      // Research links - METADATA FIRST
+      source_url: meta.aliexpress_link || product.source_url || product.supplier_url || '',
+      amazon_link: meta.amazon_link || product.amazon_link || '',
+      competitor_link_1: meta.competitor_link_1 || product.competitor_link_1 || '',
+      competitor_link_2: meta.competitor_link_2 || product.competitor_link_2 || '',
       
-      // Product image for banner generation
-      product_image_url: product.product_image_url || product.metadata?.product_image_url || '',
+      // Product image - METADATA FIRST (main column is often null)
+      product_image_url: meta.product_image_url || product.product_image_url || '',
       
       // Status
       status: product.status || 'new'
