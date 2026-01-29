@@ -174,7 +174,7 @@ function StatusTimeline({ currentStatus, onStatusChange, product, assets = [] })
                 
                 {/* Label */}
                 <span className={`text-xs font-medium ${
-                  isPast ? 'text-green-400' : isCurrent ? 'text-white' : 'text-dark-500'
+                  isComplete ? 'text-green-400' : isCurrent ? 'text-white' : 'text-dark-500'
                 }`}>
                   {status.label}
                 </span>
