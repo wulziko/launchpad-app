@@ -387,7 +387,7 @@ export default function ProductDetail() {
                   <h3 className="text-lg font-semibold text-white">Product Details</h3>
                 </div>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Niche</p>
                       <p className="text-white font-medium">{product?.niche || '-'}</p>
@@ -397,7 +397,7 @@ export default function ProductDetail() {
                       <p className="text-white font-medium">{product?.targetAudience || '-'}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Country</p>
                       <p className="text-white">{product?.country || '-'}</p>
@@ -892,7 +892,7 @@ function EditProductModal({ product, onClose, onSave }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Niche</label>
               <select
@@ -928,7 +928,7 @@ function EditProductModal({ product, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Country</label>
               <select
@@ -1011,7 +1011,7 @@ function EditProductModal({ product, onClose, onSave }) {
                   className="overflow-hidden"
                 >
                   <div className="p-4 pt-0 space-y-4 border-t border-dark-700">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-dark-300 mb-2">Aliexpress Link</label>
                         <input
@@ -1033,7 +1033,7 @@ function EditProductModal({ product, onClose, onSave }) {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #1</label>
                         <input

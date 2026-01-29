@@ -81,15 +81,13 @@ export default function Layout({ children }) {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside
+      <aside
         className={`
           fixed inset-y-0 left-0 z-50 w-64 bg-dark-900/95 backdrop-blur-xl border-r border-dark-800
+          transform transition-transform duration-300 ease-out-expo
           lg:static lg:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
-        initial={false}
-        animate={{ x: sidebarOpen ? 0 : undefined }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -253,23 +251,33 @@ export default function Layout({ children }) {
             </div>
           </div>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800 flex items-center px-4 gap-4">
+        <header className="sticky top-0 z-30 h-14 sm:h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800 flex items-center px-3 sm:px-4 gap-2 sm:gap-4">
+          {/* Mobile menu button - larger touch target */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="lg:hidden p-2 text-dark-400 hover:text-white hover:bg-dark-800 rounded-lg"
+            className="lg:hidden p-3 -ml-1 text-dark-300 hover:text-white hover:bg-dark-800 rounded-xl active:bg-dark-700 transition-colors"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
           >
             <Menu className="w-6 h-6" />
           </motion.button>
 
-          {/* Search */}
-          <div className="flex-1 max-w-xl">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+              <Rocket className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-white">LaunchPad</span>
+          </div>
+
+          {/* Search - responsive */}
+          <div className="flex-1 max-w-xl hidden sm:block">
             <motion.button
               onClick={commandPalette.open}
               whileHover={{ scale: 1.01 }}
@@ -278,7 +286,7 @@ export default function Layout({ children }) {
             >
               <Search className="w-5 h-5" />
               <span className="flex-1 text-left">Search anything...</span>
-              <div className="hidden sm:flex items-center gap-1">
+              <div className="hidden md:flex items-center gap-1">
                 <kbd className="px-2 py-1 text-xs bg-dark-700 border border-dark-600 rounded">
                   <Command className="w-3 h-3 inline" />
                 </kbd>
@@ -287,23 +295,37 @@ export default function Layout({ children }) {
             </motion.button>
           </div>
 
-          {/* Actions */}
+          {/* Spacer for mobile */}
+          <div className="flex-1 sm:hidden" />
+
+          {/* Mobile search icon */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={commandPalette.open}
+            className="sm:hidden p-3 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl active:bg-dark-700 transition-colors"
+            aria-label="Search"
+          >
+            <Search className="w-5 h-5" />
+          </motion.button>
+
+          {/* Notifications */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative p-2.5 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl transition-colors"
+            className="relative p-3 text-dark-400 hover:text-white hover:bg-dark-800 rounded-xl active:bg-dark-700 transition-colors"
+            aria-label="Notifications"
           >
             <Bell className="w-5 h-5" />
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full"
+              className="absolute top-2 right-2 w-2 h-2 bg-primary-500 rounded-full"
             />
           </motion.button>
         </header>
 
         {/* Page content with transitions */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

@@ -799,7 +799,7 @@ function NewProductModal({ onClose, onAdd }) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="grid grid-cols-3 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
           >
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">Country</label>
@@ -961,7 +961,7 @@ function NewProductModal({ onClose, onAdd }) {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-dark-300 mb-2">Competitor #1</label>
                         <input
