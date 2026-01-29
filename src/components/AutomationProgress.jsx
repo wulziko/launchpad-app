@@ -454,6 +454,7 @@ export default function AutomationProgress({ product, onStatusChange }) {
     if (isProcessing) return 'border-primary-500/30 bg-gradient-to-br from-primary-500/10 to-purple-500/5'
     if (isComplete) return 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/5'
     if (isError) return 'border-red-500/30 bg-gradient-to-br from-red-500/10 to-orange-500/5'
+    if (isStopped) return 'border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-yellow-500/5'
     return 'border-dark-700 bg-dark-900/50'
   }
 
@@ -461,6 +462,7 @@ export default function AutomationProgress({ product, onStatusChange }) {
     if (isProcessing) return 'from-primary-400 to-purple-400'
     if (isComplete) return 'from-green-400 to-emerald-400'
     if (isError) return 'from-red-400 to-orange-400'
+    if (isStopped) return 'from-amber-400 to-yellow-400'
     return 'from-dark-400 to-dark-500'
   }
 
@@ -520,43 +522,127 @@ export default function AutomationProgress({ product, onStatusChange }) {
                 ? `Generation complete! ${status?.banners?.length || 0} banners created`
                 : isError
                 ? 'Something went wrong'
+                : isStopped
+                ? `Stopped at ${status?.progress || 0}% - click Resume to continue`
                 : 'Ready to generate banners'}
             </p>
           </div>
         </div>
 
-        {/* Trigger/Retry Button */}
-        <AnimatePresence mode="wait">
-          {(!isProcessing && (status?.status === 'idle' || isError || !status?.status)) && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              onClick={handleTrigger}
-              disabled={isTriggering}
-              whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.4)' }}
-              whileTap={{ scale: 0.98 }}
-              className="btn btn-primary"
-            >
-              {isTriggering ? (
-                <>
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {/* Stop Button - shown during processing */}
+          <AnimatePresence mode="wait">
+            {isProcessing && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={handleStop}
+                disabled={isStopping}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
+              >
+                {isStopping ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Stopping...
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-4 h-4" />
+                    Stop
+                  </>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* Resume Button - shown when stopped */}
+          <AnimatePresence mode="wait">
+            {isStopped && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={handleResume}
+                disabled={isResuming}
+                whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(34, 197, 94, 0.4)' }}
+                whileTap={{ scale: 0.98 }}
+                className="btn bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20"
+              >
+                {isResuming ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Resuming...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Resume
+                  </>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* Trigger/Retry Button */}
+          <AnimatePresence mode="wait">
+            {(!isProcessing && !isStopped && (status?.status === 'idle' || isError || !status?.status)) && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={handleTrigger}
+                disabled={isTriggering}
+                whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -15px rgba(236, 72, 153, 0.4)' }}
+                whileTap={{ scale: 0.98 }}
+                className="btn btn-primary"
+              >
+                {isTriggering ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : isError ? (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    Retry
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Generate Banners
+                  </>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* Restart Button - shown when stopped (secondary option) */}
+          <AnimatePresence mode="wait">
+            {isStopped && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={handleTrigger}
+                disabled={isTriggering}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn bg-dark-700 text-dark-300 border border-dark-600 hover:bg-dark-600"
+                title="Start over from the beginning"
+              >
+                {isTriggering ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Starting...
-                </>
-              ) : isError ? (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  Retry
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  Generate Banners
-                </>
-              )}
-            </motion.button>
-          )}
-        </AnimatePresence>
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Processing State */}
@@ -627,6 +713,37 @@ export default function AutomationProgress({ product, onStatusChange }) {
             <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl mb-4">
               <CheckCircle2 className="w-5 h-5 text-green-400" />
               <span className="text-green-400 font-medium">All stages completed successfully!</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Stopped State */}
+      <AnimatePresence>
+        {isStopped && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-4"
+          >
+            <div className="flex items-start gap-3">
+              <Pause className="w-5 h-5 text-amber-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-amber-400 font-medium">Generation Paused</p>
+                <p className="text-sm text-amber-400/80 mt-1">
+                  Stopped at {status?.progress || 0}% • {status?.message || 'Click Resume to continue from where you left off'}
+                </p>
+                {/* Progress indicator for stopped state */}
+                <div className="mt-3">
+                  <div className="h-1.5 bg-dark-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-amber-500/50 rounded-full"
+                      style={{ width: `${status?.progress || 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
