@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
@@ -6,6 +6,7 @@ import { useData } from '../context/DataContext'
 import { storage } from '../lib/supabase'
 import { PageLoading, CardSkeleton } from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
+import { MiniConfetti } from '../components/Confetti'
 import {
   Plus,
   LayoutGrid,
@@ -22,6 +23,8 @@ import {
   Image,
   Sparkles,
   Package,
+  Star,
+  Zap,
 } from 'lucide-react'
 
 // Card animation variants
@@ -54,10 +57,37 @@ const columnVariants = {
   }),
 }
 
+// Skeleton card for loading state
+function ProductCardSkeleton({ index }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="bg-dark-800/50 backdrop-blur-sm border border-dark-700/50 rounded-xl p-4"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="h-5 bg-dark-700 rounded-lg w-3/4 skeleton" />
+        <div className="w-6 h-6 bg-dark-700 rounded skeleton" />
+      </div>
+      <div className="h-4 bg-dark-700 rounded w-full mb-2 skeleton" />
+      <div className="h-4 bg-dark-700 rounded w-2/3 mb-4 skeleton" />
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <div className="h-3 bg-dark-700 rounded w-12 skeleton" />
+          <div className="h-3 bg-dark-700 rounded w-16 skeleton" />
+        </div>
+        <div className="h-6 bg-dark-700 rounded-lg w-20 skeleton" />
+      </div>
+    </motion.div>
+  )
+}
+
 export default function Products() {
   const [view, setView] = useState('kanban')
   const [showNewModal, setShowNewModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [celebratingCard, setCelebratingCard] = useState(null)
   const { products, STATUSES, updateProductStatus, addProduct, deleteProduct, loading, error } = useData()
 
   const filteredProducts = (products || []).filter(p => {
@@ -72,9 +102,15 @@ export default function Products() {
     return filteredProducts.filter(p => p?.status === statusId)
   }
 
-  const handleStatusChange = async (productId, newStatus) => {
+  const handleStatusChange = async (productId, newStatus, oldStatus) => {
     try {
       await updateProductStatus(productId, newStatus)
+      
+      // Celebrate when moving to "live" status
+      if (newStatus === 'live' && oldStatus !== 'live') {
+        setCelebratingCard(productId)
+        setTimeout(() => setCelebratingCard(null), 2000)
+      }
     } catch (err) {
       console.error('Failed to update status:', err)
     }
@@ -92,21 +128,37 @@ export default function Products() {
   if (loading) {
     return (
       <div className="space-y-6">
+        {/* Header skeleton */}
         <div className="flex justify-between items-center">
           <div>
+            <div className="h-4 bg-dark-800 rounded w-24 mb-2 skeleton" />
             <div className="h-8 bg-dark-800 rounded-lg w-32 mb-2 skeleton" />
             <div className="h-4 bg-dark-800 rounded w-64 skeleton" />
           </div>
           <div className="h-10 bg-dark-800 rounded-xl w-32 skeleton" />
         </div>
+        
+        {/* Toolbar skeleton */}
+        <div className="flex gap-4">
+          <div className="flex-1 h-12 bg-dark-800 rounded-xl skeleton" />
+          <div className="h-12 bg-dark-800 rounded-xl w-24 skeleton" />
+          <div className="h-12 bg-dark-800 rounded-xl w-24 skeleton" />
+        </div>
+        
+        {/* Kanban skeleton */}
         <div className="flex gap-4 overflow-x-auto pb-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="flex-shrink-0 w-72">
-              <div className="bg-dark-900/70 rounded-2xl border border-dark-800 p-4">
-                <div className="h-6 bg-dark-800 rounded w-32 mb-4 skeleton" />
+              <div className="bg-dark-900/50 backdrop-blur-sm rounded-2xl border border-dark-800 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-3 h-3 rounded-full bg-dark-700 skeleton" />
+                  <div className="h-5 bg-dark-700 rounded w-24 skeleton" />
+                  <div className="h-5 bg-dark-700 rounded-full w-8 skeleton" />
+                </div>
                 <div className="space-y-3">
-                  <CardSkeleton />
-                  <CardSkeleton />
+                  <ProductCardSkeleton index={0} />
+                  <ProductCardSkeleton index={1} />
+                  {i < 3 && <ProductCardSkeleton index={2} />}
                 </div>
               </div>
             </div>
@@ -313,6 +365,14 @@ export default function Products() {
                             {statusProducts.length}
                           </span>
                         </div>
+                        {status?.id === 'live' && statusProducts.length > 0 && (
+                          <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                          >
+                            <Star className="w-4 h-4 text-yellow-400" />
+                          </motion.div>
+                        )}
                       </div>
 
                       {/* Cards */}
@@ -326,6 +386,7 @@ export default function Products() {
                               onStatusChange={handleStatusChange}
                               onDelete={handleDelete}
                               index={cardIndex}
+                              isCelebrating={celebratingCard === product?.id}
                             />
                           ))}
 
@@ -335,6 +396,7 @@ export default function Products() {
                               animate={{ opacity: 1 }}
                               className="py-8 text-center text-dark-600 text-sm border-2 border-dashed border-dark-800 rounded-xl"
                             >
+                              <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
                               No products
                             </motion.div>
                           )}
@@ -378,15 +440,24 @@ export default function Products() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className="border-b border-dark-800/50 last:border-0 group"
+                      className="border-b border-dark-800/50 last:border-0 group hover:bg-dark-800/30"
                     >
                       <td className="py-4 pl-4">
                         <Link to={`/products/${product.id}`} className="flex items-center gap-3">
+                          {/* Thumbnail preview */}
                           <motion.div
                             whileHover={{ scale: 1.1, rotate: 5 }}
-                            className="w-10 h-10 rounded-xl bg-gradient-to-br from-dark-700 to-dark-800 flex items-center justify-center text-lg"
+                            className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-dark-700 to-dark-800 flex items-center justify-center text-lg overflow-hidden"
                           >
-                            📦
+                            {product.product_image_url ? (
+                              <img 
+                                src={product.product_image_url} 
+                                alt="" 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span>📦</span>
+                            )}
                           </motion.div>
                           <div>
                             <p className="font-medium text-white group-hover:text-primary-400 transition-colors">
@@ -441,29 +512,68 @@ export default function Products() {
   )
 }
 
-function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
+function ProductCard({ product, statuses, onStatusChange, onDelete, index, isCelebrating }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const cardRef = useRef(null)
   
   if (!product) return null
   
   const statusInfo = (statuses || []).find(s => s?.id === product?.status) || {}
+  const isLive = product?.status === 'live'
 
   return (
     <motion.div
+      ref={cardRef}
       layout
+      layoutId={product.id}
       custom={index}
       variants={cardVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
-      whileHover={{ y: -2, scale: 1.01 }}
-      className="bg-dark-800/50 backdrop-blur-sm border border-dark-700/50 rounded-xl p-4 group cursor-pointer"
+      whileHover={{ y: -4, scale: 1.02 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className={`relative bg-dark-800/50 backdrop-blur-sm border rounded-xl p-4 group cursor-pointer transition-colors ${
+        isLive ? 'border-yellow-500/30' : 'border-dark-700/50'
+      } ${isCelebrating ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-dark-900' : ''}`}
     >
-      <div className="flex items-start justify-between mb-3">
+      {/* Celebration confetti */}
+      <MiniConfetti active={isCelebrating} />
+      
+      {/* Live glow effect */}
+      {isLive && (
+        <motion.div
+          className="absolute inset-0 rounded-xl bg-yellow-500/5"
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+        />
+      )}
+
+      {/* Hover preview thumbnail */}
+      <AnimatePresence>
+        {isHovered && product.product_image_url && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+            className="absolute -top-24 left-1/2 -translate-x-1/2 w-32 h-20 rounded-lg overflow-hidden border border-dark-600 shadow-xl z-30"
+          >
+            <img 
+              src={product.product_image_url} 
+              alt="" 
+              className="w-full h-full object-cover"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative flex items-start justify-between mb-3">
         <Link 
           to={`/products/${product.id}`} 
-          className="font-medium text-white hover:text-primary-400 transition-colors flex-1"
+          className="font-medium text-white hover:text-primary-400 transition-colors flex-1 line-clamp-1"
         >
           {product.name || 'Untitled Product'}
         </Link>
@@ -515,7 +625,7 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
           {product.niche && (
             <>
               <span className="w-1 h-1 rounded-full bg-dark-600" />
-              <span>{product.niche}</span>
+              <span className="truncate max-w-[80px]">{product.niche}</span>
             </>
           )}
         </div>
@@ -543,7 +653,10 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
                   {(statuses || []).map((status) => (
                     <motion.button
                       key={status?.id || Math.random()}
-                      onClick={() => { onStatusChange(product.id, status?.id); setStatusMenuOpen(false) }}
+                      onClick={() => { 
+                        onStatusChange(product.id, status?.id, product.status)
+                        setStatusMenuOpen(false) 
+                      }}
                       whileHover={{ backgroundColor: 'rgba(51, 65, 85, 0.5)' }}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                         product?.status === status?.id ? 'text-primary-400' : 'text-dark-300'
@@ -551,6 +664,9 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
                     >
                       <span className={`w-2 h-2 rounded-full ${status?.color || 'bg-dark-600'}`} />
                       {status?.label || 'Unknown'}
+                      {status?.id === 'live' && product?.status !== 'live' && (
+                        <Zap className="w-3 h-3 text-yellow-400 ml-auto" />
+                      )}
                     </motion.button>
                   ))}
                 </motion.div>
@@ -563,7 +679,7 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
       {/* Tags */}
       {product.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
-          {product.tags.map((tag, i) => (
+          {product.tags.slice(0, 3).map((tag, i) => (
             <motion.span
               key={tag || i}
               initial={{ opacity: 0, scale: 0.8 }}
@@ -574,6 +690,11 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index }) {
               {tag}
             </motion.span>
           ))}
+          {product.tags.length > 3 && (
+            <span className="text-xs px-2 py-0.5 text-dark-500">
+              +{product.tags.length - 3}
+            </span>
+          )}
         </div>
       )}
     </motion.div>

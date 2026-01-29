@@ -5,9 +5,10 @@
 
 import { supabase } from './supabase'
 
-// API proxy endpoint (avoids CORS issues)
-// Uses Vercel serverless function to proxy to n8n
+// API proxy endpoints (avoids CORS issues)
+// Uses Vercel serverless functions to proxy to n8n
 const BANNER_API_URL = '/api/trigger-banners'
+const MANAGE_EXECUTION_URL = '/api/manage-execution'
 
 /**
  * Trigger n8n workflow for a product
@@ -291,11 +292,142 @@ export const completeAutomation = async (productId, results = {}) => {
   })
 }
 
+/**
+ * Stop a running automation
+ * Calls n8n API to stop the execution and updates product status
+ */
+export const stopAutomation = async (productId, executionId = null) => {
+  try {
+    // Get execution ID from metadata if not provided
+    if (!executionId && supabase) {
+      const { data } = await supabase
+        .from('products')
+        .select('metadata')
+        .eq('id', productId)
+        .single()
+      executionId = data?.metadata?.n8n_execution_id
+    }
+
+    // Try to stop n8n execution if we have an ID
+    if (executionId) {
+      try {
+        const response = await fetch(MANAGE_EXECUTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'stop', executionId })
+        })
+        
+        if (!response.ok) {
+          console.warn('n8n stop request failed, but continuing with status update')
+        }
+      } catch (e) {
+        console.warn('Failed to stop n8n execution:', e)
+      }
+    }
+
+    // Update product status to stopped
+    await updateProductAutomationStatus(productId, {
+      automation_status: 'stopped',
+      automation_message: 'Generation stopped by user',
+      automation_stopped_at: new Date().toISOString()
+    })
+
+    return { success: true, message: 'Automation stopped' }
+  } catch (error) {
+    console.error('Failed to stop automation:', error)
+    throw error
+  }
+}
+
+/**
+ * Resume a stopped automation
+ * Retriggers the workflow from where it left off (or from start if no checkpoint)
+ */
+export const resumeAutomation = async (product) => {
+  try {
+    // Get current status to check for checkpoint
+    const { data } = await supabase
+      .from('products')
+      .select('metadata')
+      .eq('id', product.id)
+      .single()
+
+    const metadata = data?.metadata || {}
+    const lastProgress = metadata.automation_progress || 0
+    const lastStage = metadata.automation_last_stage || 'start'
+
+    // Update status to show resuming
+    await updateProductAutomationStatus(product.id, {
+      automation_status: 'processing',
+      automation_message: lastProgress > 0 
+        ? `Resuming from ${lastProgress}%...`
+        : 'Resuming generation...',
+      automation_resumed_at: new Date().toISOString()
+    })
+
+    // Call resume endpoint
+    const response = await fetch(MANAGE_EXECUTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'resume',
+        productId: product.id,
+        product: {
+          ...product,
+          resume_from_progress: lastProgress,
+          resume_from_stage: lastStage
+        }
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to resume automation')
+    }
+
+    return { success: true, message: 'Automation resumed' }
+  } catch (error) {
+    console.error('Failed to resume automation:', error)
+    
+    // Update status to error
+    await updateProductAutomationStatus(product.id, {
+      automation_status: 'error',
+      automation_message: `Resume failed: ${error.message}`
+    })
+    
+    throw error
+  }
+}
+
+/**
+ * Get n8n execution status
+ */
+export const getExecutionStatus = async (executionId) => {
+  try {
+    const response = await fetch(MANAGE_EXECUTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'status', executionId })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to get execution status')
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to get execution status:', error)
+    throw error
+  }
+}
+
 export default {
   triggerBannerGeneration,
   updateProductAutomationStatus,
   subscribeToAutomationUpdates,
   getAutomationStatus,
   addGeneratedBanner,
-  completeAutomation
+  completeAutomation,
+  stopAutomation,
+  resumeAutomation,
+  getExecutionStatus
 }

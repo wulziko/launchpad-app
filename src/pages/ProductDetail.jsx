@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -28,7 +28,23 @@ import {
   Link as LinkIcon,
   Package,
   Tag,
+  CheckCircle2,
+  Circle,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  Maximize2,
 } from 'lucide-react'
+
+// Status timeline configuration
+const STATUS_TIMELINE = [
+  { id: 'new', label: 'New', color: 'bg-blue-500' },
+  { id: 'research', label: 'Research', color: 'bg-purple-500' },
+  { id: 'banner_gen', label: 'Banner Gen', color: 'bg-yellow-500' },
+  { id: 'landing_page', label: 'Landing Page', color: 'bg-orange-500' },
+  { id: 'review', label: 'Review', color: 'bg-pink-500' },
+  { id: 'live', label: 'Live', color: 'bg-green-500' },
+]
 
 // Tab content animation variants
 const tabContentVariants = {
@@ -47,6 +63,386 @@ const cardVariants = {
   }),
 }
 
+// Status Timeline Component
+function StatusTimeline({ currentStatus, onStatusChange }) {
+  const currentIndex = STATUS_TIMELINE.findIndex(s => s.id === currentStatus)
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card"
+    >
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
+          <Sparkles className="w-5 h-5 text-primary-400" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-white">Product Journey</h3>
+          <p className="text-xs text-dark-500">Track your product's progress</p>
+        </div>
+      </div>
+      
+      <div className="relative">
+        {/* Progress line background */}
+        <div className="absolute top-5 left-5 right-5 h-1 bg-dark-800 rounded-full" />
+        
+        {/* Progress line filled */}
+        <motion.div
+          className="absolute top-5 left-5 h-1 bg-gradient-to-r from-primary-500 to-green-500 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.max(0, (currentIndex / (STATUS_TIMELINE.length - 1)) * 100)}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          style={{ maxWidth: 'calc(100% - 40px)' }}
+        />
+        
+        {/* Status nodes */}
+        <div className="relative flex justify-between">
+          {STATUS_TIMELINE.map((status, index) => {
+            const isPast = index < currentIndex
+            const isCurrent = index === currentIndex
+            const isFuture = index > currentIndex
+            
+            return (
+              <motion.button
+                key={status.id}
+                onClick={() => onStatusChange?.(status.id)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex flex-col items-center gap-2 group"
+              >
+                {/* Node */}
+                <motion.div
+                  className={`relative w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all ${
+                    isPast
+                      ? 'bg-green-500/20 border-green-500'
+                      : isCurrent
+                        ? `${status.color.replace('bg-', 'bg-').replace('-500', '-500/20')} border-current`
+                        : 'bg-dark-800 border-dark-700 group-hover:border-dark-500'
+                  }`}
+                  animate={isCurrent ? { scale: [1, 1.05, 1] } : {}}
+                  transition={isCurrent ? { repeat: Infinity, duration: 2 } : {}}
+                  style={{ color: isCurrent ? status.color.replace('bg-', '').replace('-500', '') === 'blue' ? '#3b82f6' 
+                    : status.color.replace('bg-', '').replace('-500', '') === 'purple' ? '#8b5cf6'
+                    : status.color.replace('bg-', '').replace('-500', '') === 'yellow' ? '#eab308'
+                    : status.color.replace('bg-', '').replace('-500', '') === 'orange' ? '#f97316'
+                    : status.color.replace('bg-', '').replace('-500', '') === 'pink' ? '#ec4899'
+                    : '#22c55e' : undefined }}
+                >
+                  {isPast ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  ) : isCurrent ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
+                    >
+                      <Zap className="w-5 h-5" style={{ color: 'inherit' }} />
+                    </motion.div>
+                  ) : (
+                    <Circle className="w-5 h-5 text-dark-600" />
+                  )}
+                  
+                  {/* Pulse effect for current */}
+                  {isCurrent && (
+                    <motion.div
+                      className="absolute inset-0 rounded-xl border-2"
+                      style={{ borderColor: 'inherit' }}
+                      initial={{ scale: 1, opacity: 0.5 }}
+                      animate={{ scale: 1.5, opacity: 0 }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                    />
+                  )}
+                </motion.div>
+                
+                {/* Label */}
+                <span className={`text-xs font-medium ${
+                  isPast ? 'text-green-400' : isCurrent ? 'text-white' : 'text-dark-500'
+                }`}>
+                  {status.label}
+                </span>
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// Lightbox Component
+function Lightbox({ images, currentIndex, onClose, onPrev, onNext }) {
+  const currentImage = images[currentIndex]
+  
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-colors z-10"
+      >
+        <X className="w-6 h-6" />
+      </motion.button>
+      
+      {/* Counter */}
+      <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/10 rounded-lg text-white text-sm">
+        {currentIndex + 1} / {images.length}
+      </div>
+      
+      {/* Navigation */}
+      {images.length > 1 && (
+        <>
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => { e.stopPropagation(); onPrev() }}
+            className="absolute left-4 p-3 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </motion.button>
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => { e.stopPropagation(); onNext() }}
+            className="absolute right-4 p-3 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </motion.button>
+        </>
+      )}
+      
+      {/* Image */}
+      <motion.div
+        key={currentIndex}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ type: 'spring', damping: 25 }}
+        className="max-w-[90vw] max-h-[85vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={currentImage?.url}
+          alt={currentImage?.name || 'Image'}
+          className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+        />
+      </motion.div>
+      
+      {/* Bottom info */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+        <span className="text-white text-sm">{currentImage?.name || `Image ${currentIndex + 1}`}</span>
+        <motion.a
+          href={currentImage?.url}
+          download={currentImage?.name || `image-${currentIndex + 1}.png`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download
+        </motion.a>
+      </div>
+    </motion.div>,
+    document.body
+  )
+}
+
+// Asset Gallery Component
+function AssetGallery({ banners, productImage }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  
+  // Combine product image with banners for gallery
+  const allImages = [
+    ...(productImage ? [{ url: productImage, name: 'Product Image', type: 'product' }] : []),
+    ...(banners || []).map((b, i) => ({ url: b.url, name: b.name || `Banner ${i + 1}`, type: 'banner', id: b.id }))
+  ]
+  
+  const openLightbox = (index) => {
+    setCurrentIndex(index)
+    setLightboxOpen(true)
+  }
+  
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + allImages.length) % allImages.length)
+  }
+  
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % allImages.length)
+  }
+  
+  if (allImages.length === 0) {
+    return (
+      <div className="text-center py-12 border-2 border-dashed border-dark-800 rounded-xl">
+        <Image className="w-12 h-12 mx-auto mb-3 text-dark-700" />
+        <p className="text-dark-500">No images available</p>
+      </div>
+    )
+  }
+  
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {allImages.map((image, index) => (
+          <motion.div
+            key={image.id || index}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.05 }}
+            whileHover={{ scale: 1.03, y: -4 }}
+            onClick={() => openLightbox(index)}
+            className="group relative aspect-square rounded-xl overflow-hidden bg-dark-800 border border-dark-700 cursor-pointer shadow-lg hover:shadow-xl transition-all"
+          >
+            <img
+              src={image.url}
+              alt={image.name}
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <p className="text-white text-sm font-medium truncate">{image.name}</p>
+                <p className="text-white/60 text-xs capitalize">{image.type}</p>
+              </div>
+              
+              {/* Action buttons */}
+              <div className="absolute top-2 right-2 flex gap-1">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => { e.stopPropagation(); openLightbox(index) }}
+                  className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors"
+                >
+                  <Maximize2 className="w-4 h-4 text-white" />
+                </motion.button>
+                <motion.a
+                  href={image.url}
+                  download={image.name}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors"
+                >
+                  <Download className="w-4 h-4 text-white" />
+                </motion.a>
+              </div>
+            </div>
+            
+            {/* Type badge */}
+            {image.type === 'product' && (
+              <div className="absolute top-2 left-2 px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full">
+                Main
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+      
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <Lightbox
+            images={allImages}
+            currentIndex={currentIndex}
+            onClose={() => setLightboxOpen(false)}
+            onPrev={handlePrev}
+            onNext={handleNext}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+// Download button with feedback
+function DownloadButton({ url, name, children }) {
+  const [downloading, setDownloading] = useState(false)
+  const [downloaded, setDownloaded] = useState(false)
+  
+  const handleDownload = async () => {
+    setDownloading(true)
+    
+    // Simulate download delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Trigger actual download
+    const link = document.createElement('a')
+    link.href = url
+    link.download = name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    setDownloading(false)
+    setDownloaded(true)
+    setTimeout(() => setDownloaded(false), 2000)
+  }
+  
+  return (
+    <motion.button
+      onClick={handleDownload}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      disabled={downloading}
+      className={`relative overflow-hidden ${downloaded ? 'bg-green-500/20 text-green-400' : ''}`}
+    >
+      <AnimatePresence mode="wait">
+        {downloaded ? (
+          <motion.span
+            key="success"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Downloaded!
+          </motion.span>
+        ) : downloading ? (
+          <motion.span
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
+            />
+            Downloading...
+          </motion.span>
+        ) : (
+          <motion.span
+            key="default"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+          >
+            {children}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  )
+}
+
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -54,6 +450,7 @@ export default function ProductDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  const [saveIndicator, setSaveIndicator] = useState(false)
 
   const safeProducts = products || []
   const safeStatuses = STATUSES || []
@@ -142,6 +539,16 @@ export default function ProductDetail() {
       console.error('Failed to update status:', err)
     }
   }
+  
+  const handleNotesChange = async (notes) => {
+    setSaveIndicator(true)
+    try {
+      await updateProduct?.(id, { notes })
+    } catch (err) {
+      console.error('Failed to save notes:', err)
+    }
+    setTimeout(() => setSaveIndicator(false), 1500)
+  }
 
   const formatDate = (date) => {
     if (!date) return 'Unknown'
@@ -187,7 +594,7 @@ export default function ProductDetail() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-3 mb-2"
+              className="flex items-center gap-3 mb-2 flex-wrap"
             >
               <h1 className="text-2xl sm:text-3xl font-bold text-white">{productName}</h1>
               
@@ -278,6 +685,45 @@ export default function ProductDetail() {
           </motion.button>
         </motion.div>
       </motion.div>
+      
+      {/* Hero Product Image */}
+      {product?.product_image_url && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-dark-800 border border-dark-700"
+        >
+          <img
+            src={product.product_image_url}
+            alt={productName}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+            <div>
+              <p className="text-white font-bold text-xl">{productName}</p>
+              <p className="text-dark-300 text-sm">{product.niche || 'No niche'}</p>
+            </div>
+            <motion.a
+              href={product.product_image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-colors"
+            >
+              <Maximize2 className="w-5 h-5" />
+            </motion.a>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Status Timeline */}
+      <StatusTimeline
+        currentStatus={product?.status}
+        onStatusChange={handleStatusChange}
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -327,7 +773,7 @@ export default function ProductDetail() {
         transition={{ delay: 0.3 }}
         className="border-b border-dark-800"
       >
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab, index) => (
             <motion.button
               key={tab.id}
@@ -335,7 +781,7 @@ export default function ProductDetail() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + index * 0.05 }}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-white'
                   : 'text-dark-500 hover:text-dark-300'
@@ -474,60 +920,43 @@ export default function ProductDetail() {
                 </div>
               </motion.div>
 
-              {/* Product Image */}
+              {/* Notes with auto-save indicator */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="card"
+                className="card lg:col-span-2"
               >
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                    <Image className="w-5 h-5 text-green-400" />
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Notes</h3>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Product Image</h3>
-                </div>
-                {product?.product_image_url ? (
-                  <div className="space-y-3">
-                    <motion.img
-                      src={product.product_image_url}
-                      alt={product.name}
-                      whileHover={{ scale: 1.02 }}
-                      className="w-full max-w-xs rounded-xl border border-dark-700 shadow-lg"
-                    />
-                    <a
-                      href={product.product_image_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
-                    >
-                      Open full image <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                ) : (
-                  <div className="text-center py-10 border-2 border-dashed border-dark-800 rounded-xl">
-                    <Image className="w-12 h-12 mx-auto mb-2 text-dark-700" />
-                    <p className="text-dark-600">No product image</p>
-                  </div>
-                )}
-              </motion.div>
-
-              {/* Notes */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="card"
-              >
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-yellow-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Notes</h3>
+                  <AnimatePresence>
+                    {saveIndicator && (
+                      <motion.div
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2 text-sm text-green-400"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Saved
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <textarea
-                  value={product?.notes || ''}
-                  onChange={(e) => updateProduct?.(id, { notes: e.target.value })}
+                  defaultValue={product?.notes || ''}
+                  onChange={(e) => {
+                    // Debounced auto-save
+                    clearTimeout(window.notesTimeout)
+                    window.notesTimeout = setTimeout(() => {
+                      handleNotesChange(e.target.value)
+                    }, 1000)
+                  }}
                   className="input min-h-[150px] resize-none"
                   placeholder="Add notes about this product..."
                 />
@@ -537,7 +966,7 @@ export default function ProductDetail() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.3 }}
                 className="card lg:col-span-2"
               >
                 <div className="flex items-center gap-3 mb-5">
@@ -573,51 +1002,33 @@ export default function ProductDetail() {
                 onStatusChange={(update) => console.log('Automation update:', update)}
               />
               
-              {productBanners.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="card"
-                >
-                  <h3 className="text-lg font-semibold text-white mb-4">Previous Banners</h3>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {productBanners.map((banner, i) => (
-                      <motion.div
-                        key={banner?.id || i}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.02 }}
-                        className="group relative rounded-xl overflow-hidden bg-dark-800 border border-dark-700"
-                      >
-                        {banner?.url ? (
-                          <img src={banner.url} alt="Banner" className="w-full aspect-square object-cover" />
-                        ) : (
-                          <div className="w-full aspect-square flex items-center justify-center">
-                            <Image className="w-12 h-12 text-dark-700" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="p-2.5 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20"
-                          >
-                            <Eye className="w-5 h-5 text-white" />
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="p-2.5 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20"
-                          >
-                            <Download className="w-5 h-5 text-white" />
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    ))}
+              {/* Asset Gallery */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card"
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                      <Image className="w-5 h-5 text-primary-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Asset Gallery</h3>
+                      <p className="text-xs text-dark-500">All images and banners</p>
+                    </div>
                   </div>
-                </motion.div>
-              )}
+                  {(productBanners.length > 0 || product?.product_image_url) && (
+                    <span className="text-sm text-dark-400">
+                      {(product?.product_image_url ? 1 : 0) + productBanners.length} assets
+                    </span>
+                  )}
+                </div>
+                <AssetGallery
+                  banners={productBanners}
+                  productImage={product?.product_image_url}
+                />
+              </motion.div>
             </div>
           )}
 
