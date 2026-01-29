@@ -412,11 +412,28 @@ export default function AutomationProgress({ product, onStatusChange }) {
   const handleTrigger = async () => {
     setIsTriggering(true)
     setLogs([{ time: new Date(), message: 'Initiating automation...' }])
+    
+    // Optimistically update UI immediately for instant feedback
+    setStatus(prev => ({
+      ...prev,
+      status: 'processing',
+      progress: 0,
+      message: 'Starting banner generation...',
+      startedAt: new Date().toISOString()
+    }))
+    
     try {
       await triggerBannerGeneration(product)
+      // Subscription will sync the real state from backend
     } catch (error) {
       console.error('Failed to trigger automation:', error)
       setLogs(prev => [...prev, { time: new Date(), message: `Error: ${error.message}` }])
+      // Revert optimistic update on error
+      setStatus(prev => ({
+        ...prev,
+        status: 'error',
+        message: error.message
+      }))
     } finally {
       setIsTriggering(false)
     }
@@ -425,6 +442,15 @@ export default function AutomationProgress({ product, onStatusChange }) {
   const handleStop = async () => {
     setIsStopping(true)
     setLogs(prev => [...prev, { time: new Date(), message: 'Stopping automation...' }])
+    
+    // Optimistically update UI
+    const currentProgress = status?.progress || 0
+    setStatus(prev => ({
+      ...prev,
+      status: 'stopped',
+      message: `Stopped at ${currentProgress}%`
+    }))
+    
     try {
       await stopAutomation(product.id)
       setLogs(prev => [...prev, { time: new Date(), message: 'Automation stopped by user' }])
@@ -439,12 +465,26 @@ export default function AutomationProgress({ product, onStatusChange }) {
   const handleResume = async () => {
     setIsResuming(true)
     setLogs(prev => [...prev, { time: new Date(), message: 'Resuming automation...' }])
+    
+    // Optimistically update UI
+    setStatus(prev => ({
+      ...prev,
+      status: 'processing',
+      message: 'Resuming generation...'
+    }))
+    
     try {
       await resumeAutomation(product)
       setLogs(prev => [...prev, { time: new Date(), message: 'Automation resumed' }])
     } catch (error) {
       console.error('Failed to resume automation:', error)
       setLogs(prev => [...prev, { time: new Date(), message: `Resume failed: ${error.message}` }])
+      // Revert on error
+      setStatus(prev => ({
+        ...prev,
+        status: 'error',
+        message: error.message
+      }))
     } finally {
       setIsResuming(false)
     }
