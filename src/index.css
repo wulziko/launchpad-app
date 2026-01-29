@@ -297,8 +297,8 @@
   }
   
   .command-palette {
-    @apply fixed top-[20%] left-1/2 -translate-x-1/2 
-           w-full max-w-xl
+    @apply fixed left-1/2 -translate-x-1/2 
+           w-[calc(100%-1rem)] sm:w-full max-w-xl
            bg-dark-900/95 
            border border-dark-700
            rounded-2xl
@@ -306,6 +306,14 @@
            overflow-hidden
            backdrop-blur-xl
            z-50;
+    /* Mobile: full height from top, Desktop: centered */
+    top: 0.5rem;
+  }
+  
+  @media (min-width: 640px) {
+    .command-palette {
+      top: 15%;
+    }
   }
   
   .command-input {
