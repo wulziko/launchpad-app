@@ -63,8 +63,24 @@ const cardVariants = {
   }),
 }
 
-// Status Timeline Component
-function StatusTimeline({ currentStatus, onStatusChange }) {
+// Status Timeline Component - checks actual completion, not just status position
+function StatusTimeline({ currentStatus, onStatusChange, product, assets = [] }) {
+  // Determine what's actually completed based on real data
+  const banners = assets.filter(a => a.type === 'banner' && a.product_id === product?.id)
+  const hasBanners = banners.length > 0
+  const hasLandingPage = product?.metadata?.generated_landing_page_url || product?.metadata?.landing_page_completed
+  
+  // Build completion map based on actual data
+  const completionMap = {
+    'new': true, // Always complete if product exists
+    'research': hasBanners, // Research is part of banner generation
+    'banner_gen': hasBanners,
+    'landing_page': hasLandingPage,
+    'review': currentStatus === 'review' || currentStatus === 'ready' || currentStatus === 'live',
+    'live': currentStatus === 'live'
+  }
+  
+  // Find current stage (first incomplete or the current status)
   const currentIndex = STATUS_TIMELINE.findIndex(s => s.id === currentStatus)
   
   return (
@@ -87,11 +103,13 @@ function StatusTimeline({ currentStatus, onStatusChange }) {
         {/* Progress line background */}
         <div className="absolute top-5 left-5 right-5 h-1 bg-dark-800 rounded-full" />
         
-        {/* Progress line filled */}
+        {/* Progress line filled - based on actual completions, not status position */}
         <motion.div
           className="absolute top-5 left-5 h-1 bg-gradient-to-r from-primary-500 to-green-500 rounded-full"
           initial={{ width: 0 }}
-          animate={{ width: `${Math.max(0, (currentIndex / (STATUS_TIMELINE.length - 1)) * 100)}%` }}
+          animate={{ 
+            width: `${Math.max(0, (STATUS_TIMELINE.filter(s => completionMap[s.id]).length / STATUS_TIMELINE.length) * 100)}%` 
+          }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
           style={{ maxWidth: 'calc(100% - 40px)' }}
         />
@@ -99,9 +117,9 @@ function StatusTimeline({ currentStatus, onStatusChange }) {
         {/* Status nodes */}
         <div className="relative flex justify-between">
           {STATUS_TIMELINE.map((status, index) => {
-            const isPast = index < currentIndex
-            const isCurrent = index === currentIndex
-            const isFuture = index > currentIndex
+            const isComplete = completionMap[status.id]
+            const isCurrent = status.id === currentStatus
+            const isFuture = !isComplete && !isCurrent
             
             return (
               <motion.button
@@ -114,22 +132,22 @@ function StatusTimeline({ currentStatus, onStatusChange }) {
                 {/* Node */}
                 <motion.div
                   className={`relative w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all ${
-                    isPast
+                    isComplete
                       ? 'bg-green-500/20 border-green-500'
                       : isCurrent
                         ? `${status.color.replace('bg-', 'bg-').replace('-500', '-500/20')} border-current`
                         : 'bg-dark-800 border-dark-700 group-hover:border-dark-500'
                   }`}
-                  animate={isCurrent ? { scale: [1, 1.05, 1] } : {}}
+                  animate={isCurrent && !isComplete ? { scale: [1, 1.05, 1] } : {}}
                   transition={isCurrent ? { repeat: Infinity, duration: 2 } : {}}
-                  style={{ color: isCurrent ? status.color.replace('bg-', '').replace('-500', '') === 'blue' ? '#3b82f6' 
+                  style={{ color: isCurrent && !isComplete ? status.color.replace('bg-', '').replace('-500', '') === 'blue' ? '#3b82f6' 
                     : status.color.replace('bg-', '').replace('-500', '') === 'purple' ? '#8b5cf6'
                     : status.color.replace('bg-', '').replace('-500', '') === 'yellow' ? '#eab308'
                     : status.color.replace('bg-', '').replace('-500', '') === 'orange' ? '#f97316'
                     : status.color.replace('bg-', '').replace('-500', '') === 'pink' ? '#ec4899'
                     : '#22c55e' : undefined }}
                 >
-                  {isPast ? (
+                  {isComplete ? (
                     <CheckCircle2 className="w-5 h-5 text-green-400" />
                   ) : isCurrent ? (
                     <motion.div
@@ -446,7 +464,7 @@ function DownloadButton({ url, name, children }) {
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { products, STATUSES, updateProduct, updateProductStatus, deleteProduct, duplicateProduct, loading, error } = useData()
+  const { products, assets, STATUSES, updateProduct, updateProductStatus, deleteProduct, duplicateProduct, loading, error } = useData()
   const [isEditing, setIsEditing] = useState(false)
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
@@ -723,6 +741,8 @@ export default function ProductDetail() {
       <StatusTimeline
         currentStatus={product?.status}
         onStatusChange={handleStatusChange}
+        product={product}
+        assets={assets}
       />
 
       {/* Quick Stats */}
