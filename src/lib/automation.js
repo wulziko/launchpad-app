@@ -433,11 +433,100 @@ export const getExecutionStatus = async (executionId) => {
   }
 }
 
+/**
+ * Trigger landing page generation (Product Page + Advertorial)
+ */
+export const triggerLandingPageGeneration = async (product) => {
+  try {
+    // Update status to show processing
+    await updateProductAutomationStatus(product.id, {
+      landing_page_status: 'processing',
+      landing_page_started_at: new Date().toISOString(),
+      landing_page_progress: 0,
+      landing_page_message: 'Starting landing page generation...'
+    })
+
+    // Prepare payload (same structure as banner generation)
+    const meta = product.metadata || {}
+    const payload = {
+      id: product.id,
+      user_id: product.user_id,
+      name: product.name,
+      description: product.description || '',
+      niche: product.niche || meta.niche || '',
+      language: meta.language || product.language || 'English',
+      country: meta.country || product.country || 'US',
+      gender: meta.gender || product.gender || 'All',
+      target_market: meta.country || product.target_market || 'US',
+      source_url: meta.aliexpress_link || product.source_url || '',
+      amazon_link: meta.amazon_link || product.amazon_link || '',
+      competitor_link_1: meta.competitor_link_1 || '',
+      competitor_link_2: meta.competitor_link_2 || '',
+      product_image_url: meta.product_image_url || '',
+      status: product.status || 'landing_page'
+    }
+
+    // Trigger via API proxy
+    const response = await fetch('/api/trigger-landing-pages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      throw new Error(`Landing page generation failed: ${response.statusText}`)
+    }
+
+    return { success: true, message: 'Landing page generation started!' }
+  } catch (error) {
+    console.error('Failed to trigger landing page generation:', error)
+    await updateProductAutomationStatus(product.id, {
+      landing_page_status: 'error',
+      landing_page_message: error.message
+    })
+    throw error
+  }
+}
+
+/**
+ * Get landing page status
+ */
+export const getLandingPageStatus = async (productId) => {
+  if (!supabase) return null
+  
+  const [productResult, assetsResult] = await Promise.all([
+    supabase.from('products').select('metadata').eq('id', productId).single(),
+    supabase.from('assets').select('*').eq('product_id', productId).eq('type', 'landing_page')
+  ])
+
+  if (productResult.error) throw productResult.error
+  
+  const metadata = productResult.data?.metadata || {}
+  const pages = (assetsResult.data || []).map(asset => ({
+    id: asset.id,
+    url: asset.file_url,
+    name: asset.name,
+    page_type: asset.metadata?.page_type || 'unknown',
+    created_at: asset.created_at
+  }))
+  
+  return {
+    status: metadata.landing_page_status || 'idle',
+    progress: metadata.landing_page_progress || 0,
+    message: metadata.landing_page_message || '',
+    startedAt: metadata.landing_page_started_at,
+    completedAt: metadata.landing_page_completed_at,
+    pages: pages
+  }
+}
+
 export default {
   triggerBannerGeneration,
+  triggerLandingPageGeneration,
   updateProductAutomationStatus,
   subscribeToAutomationUpdates,
   getAutomationStatus,
+  getLandingPageStatus,
   addGeneratedBanner,
   completeAutomation,
   stopAutomation,
