@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getLandingPageStatus } from '../lib/automation'
+import { getLandingPageStatus, updateProductAutomationStatus } from '../lib/automation'
 import { supabase } from '../lib/supabase'
 import {
   Loader2,
@@ -14,6 +14,8 @@ import {
   Upload,
   Zap,
   Clock,
+  Square,
+  RotateCcw,
 } from 'lucide-react'
 
 // Stage configuration for landing page generation
@@ -133,6 +135,7 @@ function StageItem({ stage, isActive, isComplete }) {
 export default function LandingPageProgress({ product }) {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isStopping, setIsStopping] = useState(false)
 
   const currentProgress = status?.progress || 0
   const currentStage = STAGES.findIndex(s => currentProgress < s.progress) - 1
@@ -141,6 +144,53 @@ export default function LandingPageProgress({ product }) {
   const isProcessing = status?.status === 'processing'
   const isComplete = status?.status === 'completed' || status?.status === 'ready'
   const isError = status?.status === 'error'
+
+  const handleStop = async () => {
+    if (!product?.id) return
+    setIsStopping(true)
+    
+    try {
+      await updateProductAutomationStatus(product.id, {
+        landing_page_status: 'idle',
+        landing_page_progress: 0,
+        landing_page_message: 'Generation stopped by user',
+        landing_page_stopped_at: new Date().toISOString()
+      })
+      
+      setStatus({
+        status: 'idle',
+        progress: 0,
+        message: 'Generation stopped',
+        pages: []
+      })
+    } catch (error) {
+      console.error('Failed to stop landing page generation:', error)
+      alert('Failed to stop generation')
+    } finally {
+      setIsStopping(false)
+    }
+  }
+
+  const handleReset = async () => {
+    if (!product?.id) return
+    
+    try {
+      await updateProductAutomationStatus(product.id, {
+        landing_page_status: 'idle',
+        landing_page_progress: 0,
+        landing_page_message: ''
+      })
+      
+      setStatus({
+        status: 'idle',
+        progress: 0,
+        message: '',
+        pages: []
+      })
+    } catch (error) {
+      console.error('Failed to reset:', error)
+    }
+  }
 
   useEffect(() => {
     if (!product?.id) return
@@ -240,16 +290,50 @@ export default function LandingPageProgress({ product }) {
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-primary-400">
-            <AnimatedNumber value={currentProgress} />%
-          </div>
+        <div className="flex items-center gap-3">
           {isProcessing && (
-            <p className="text-xs text-dark-500 flex items-center gap-1 justify-end">
-              <Clock className="w-3 h-3" />
-              ~2-3 min
-            </p>
+            <motion.button
+              onClick={handleStop}
+              disabled={isStopping}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 text-sm"
+            >
+              {isStopping ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Stopping...
+                </>
+              ) : (
+                <>
+                  <Square className="w-4 h-4" />
+                  Stop
+                </>
+              )}
+            </motion.button>
           )}
+          {(isComplete || isError) && (
+            <motion.button
+              onClick={handleReset}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-secondary text-sm"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </motion.button>
+          )}
+          <div className="text-right">
+            <div className="text-2xl font-bold text-primary-400">
+              <AnimatedNumber value={currentProgress} />%
+            </div>
+            {isProcessing && (
+              <p className="text-xs text-dark-500 flex items-center gap-1 justify-end">
+                <Clock className="w-3 h-3" />
+                ~2-3 min
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
