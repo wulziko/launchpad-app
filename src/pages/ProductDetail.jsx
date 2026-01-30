@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
 import AutomationProgress from '../components/AutomationProgress'
+import { triggerLandingPageGeneration } from '../lib/automation'
 import {
   ArrowLeft,
   Edit,
@@ -35,6 +36,7 @@ import {
   ZoomIn,
   Maximize2,
   Plus,
+  Loader2,
 } from 'lucide-react'
 
 // Status timeline configuration
@@ -470,6 +472,7 @@ export default function ProductDetail() {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [saveIndicator, setSaveIndicator] = useState(false)
+  const [isGeneratingLanding, setIsGeneratingLanding] = useState(false)
 
   const safeProducts = products || []
   const safeStatuses = STATUSES || []
@@ -567,6 +570,21 @@ export default function ProductDetail() {
       console.error('Failed to save notes:', err)
     }
     setTimeout(() => setSaveIndicator(false), 1500)
+  }
+
+  const handleGenerateLanding = async () => {
+    if (isGeneratingLanding) return
+    
+    setIsGeneratingLanding(true)
+    try {
+      await triggerLandingPageGeneration(product)
+      // Success - the real-time subscription will handle status updates
+    } catch (err) {
+      console.error('Failed to trigger landing page generation:', err)
+      alert(`Failed to start landing page generation: ${err.message}`)
+    } finally {
+      setIsGeneratingLanding(false)
+    }
   }
 
   const formatDate = (date) => {
@@ -1152,12 +1170,23 @@ export default function ProductDetail() {
                     Preview
                   </motion.button>
                   <motion.button
+                    onClick={handleGenerateLanding}
+                    disabled={isGeneratingLanding}
                     whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
                     whileTap={{ scale: 0.98 }}
                     className="btn btn-primary"
                   >
-                    <Zap className="w-4 h-4" />
-                    Generate
+                    {isGeneratingLanding ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Generate
+                      </>
+                    )}
                   </motion.button>
                 </div>
               </div>
