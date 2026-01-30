@@ -374,7 +374,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
   )
 }
 
-export default function AutomationProgress({ product, onStatusChange }) {
+export default function AutomationProgress({ product, onStatusChange, showBanners = true }) {
   const [status, setStatus] = useState(null)
   const [isTriggering, setIsTriggering] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -837,7 +837,7 @@ export default function AutomationProgress({ product, onStatusChange }) {
 
       {/* Generated Banners */}
       <AnimatePresence>
-        {status?.banners && status.banners.length > 0 && (
+        {showBanners && status?.banners && status.banners.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -315,7 +315,7 @@ function AssetGallery({ banners, productImage }) {
   
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {allImages.map((image, index) => (
           <motion.div
             key={image.id || index}
@@ -524,7 +524,7 @@ export default function ProductDetail() {
   const productDescription = product.description || ''
   const productPrice = product.price || 0
   const productMarket = product.market || '-'
-  const productBanners = product.banners || []
+  const productBanners = assets?.filter(a => a.type === 'banner' && a.product_id === product?.id) || []
   const productLandingPage = product.landingPage || { html: '', status: 'pending' }
 
   const statusInfo = safeStatuses.find(s => s?.id === product?.status) || {}
@@ -1060,6 +1060,7 @@ export default function ProductDetail() {
               <AutomationProgress
                 product={product}
                 onStatusChange={(update) => console.log('Automation update:', update)}
+                showBanners={false}
               />
               
               {/* Banner Gallery */}
