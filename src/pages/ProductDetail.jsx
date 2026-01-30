@@ -34,6 +34,7 @@ import {
   ChevronRight,
   ZoomIn,
   Maximize2,
+  Plus,
 } from 'lucide-react'
 
 // Status timeline configuration
@@ -840,10 +841,41 @@ export default function ProductDetail() {
         >
           {activeTab === 'overview' && (
             <div className="grid lg:grid-cols-2 gap-6">
+              {/* Product Image */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Image className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Product Image</h3>
+                </div>
+                {(product?.product_image_url || product?.metadata?.product_image_url) ? (
+                  <div className="relative aspect-square rounded-xl overflow-hidden border border-dark-700 bg-dark-900">
+                    <img 
+                      src={product?.product_image_url || product?.metadata?.product_image_url} 
+                      alt={product?.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded-xl border-2 border-dashed border-dark-800 flex items-center justify-center bg-dark-900/50">
+                    <div className="text-center">
+                      <Image className="w-12 h-12 mx-auto mb-2 text-dark-700" />
+                      <p className="text-dark-600">No product image</p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
               {/* Product Details */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
                 className="card"
               >
                 <div className="flex items-center gap-3 mb-5">
@@ -853,34 +885,42 @@ export default function ProductDetail() {
                   <h3 className="text-lg font-semibold text-white">Product Details</h3>
                 </div>
                 <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-dark-500 mb-1">Product Name</p>
+                    <p className="text-white font-medium">{product?.name || 'Untitled'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-dark-500 mb-1">Description</p>
+                    <p className="text-white">{product?.description || '-'}</p>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Niche</p>
-                      <p className="text-white font-medium">{product?.niche || '-'}</p>
+                      <p className="text-white font-medium">{product?.niche || product?.metadata?.niche || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Target Audience</p>
-                      <p className="text-white font-medium">{product?.targetAudience || '-'}</p>
+                      <p className="text-white font-medium">{product?.targetAudience || product?.metadata?.targetAudience || '-'}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Country</p>
-                      <p className="text-white">{product?.country || '-'}</p>
+                      <p className="text-white">{product?.country || product?.metadata?.country || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Language</p>
-                      <p className="text-white">{product?.language || '-'}</p>
+                      <p className="text-white">{product?.language || product?.metadata?.language || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Gender</p>
-                      <p className="text-white">{product?.gender || '-'}</p>
+                      <p className="text-white">{product?.gender || product?.metadata?.gender || '-'}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-sm text-dark-500 mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
-                      {(product?.tags || []).length > 0 ? product.tags.map((tag, i) => (
+                      {((product?.tags || product?.metadata?.tags) || []).length > 0 ? (product?.tags || product?.metadata?.tags).map((tag, i) => (
                         <motion.span
                           key={tag || i}
                           initial={{ opacity: 0, scale: 0.8 }}
@@ -903,7 +943,7 @@ export default function ProductDetail() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={{ delay: 0.2 }}
                 className="card"
               >
                 <div className="flex items-center gap-3 mb-5">
@@ -914,10 +954,10 @@ export default function ProductDetail() {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { label: 'Aliexpress', link: product?.aliexpress_link },
-                    { label: 'Amazon', link: product?.amazon_link },
-                    { label: 'Competitor #1', link: product?.competitor_link_1 },
-                    { label: 'Competitor #2', link: product?.competitor_link_2 },
+                    { label: 'Aliexpress', link: product?.aliexpress_link || product?.metadata?.aliexpress_link },
+                    { label: 'Amazon', link: product?.amazon_link || product?.metadata?.amazon_link },
+                    { label: 'Competitor #1', link: product?.competitor_link_1 || product?.metadata?.competitor_link_1 },
+                    { label: 'Competitor #2', link: product?.competitor_link_2 || product?.metadata?.competitor_link_2 },
                   ].map((item, i) => (
                     <div key={i}>
                       <p className="text-sm text-dark-500 mb-1">{item.label}</p>
@@ -1022,7 +1062,7 @@ export default function ProductDetail() {
                 onStatusChange={(update) => console.log('Automation update:', update)}
               />
               
-              {/* Asset Gallery */}
+              {/* Banner Gallery */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1034,19 +1074,55 @@ export default function ProductDetail() {
                       <Image className="w-5 h-5 text-primary-400" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">Asset Gallery</h3>
-                      <p className="text-xs text-dark-500">All images and banners</p>
+                      <h3 className="text-lg font-semibold text-white">Generated Banners</h3>
+                      <p className="text-xs text-dark-500">All AI-generated banner creatives</p>
                     </div>
                   </div>
-                  {(productBanners.length > 0 || product?.product_image_url) && (
-                    <span className="text-sm text-dark-400">
-                      {(product?.product_image_url ? 1 : 0) + productBanners.length} assets
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {productBanners.length > 0 && (
+                      <>
+                        <span className="text-sm text-dark-400">
+                          {productBanners.length} {productBanners.length === 1 ? 'banner' : 'banners'}
+                        </span>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={async () => {
+                            // Download all banners as zip
+                            for (let i = 0; i < productBanners.length; i++) {
+                              const banner = productBanners[i]
+                              try {
+                                const response = await fetch(banner.url)
+                                const blob = await response.blob()
+                                const url = window.URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = banner.name || `banner-${i + 1}.png`
+                                document.body.appendChild(a)
+                                a.click()
+                                window.URL.revokeObjectURL(url)
+                                document.body.removeChild(a)
+                                // Small delay between downloads
+                                if (i < productBanners.length - 1) {
+                                  await new Promise(resolve => setTimeout(resolve, 500))
+                                }
+                              } catch (error) {
+                                console.error('Download failed for banner', i + 1, error)
+                              }
+                            }
+                          }}
+                          className="btn btn-secondary text-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download All
+                        </motion.button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <AssetGallery
                   banners={productBanners}
-                  productImage={product?.product_image_url}
+                  productImage={null}
                 />
               </motion.div>
             </div>
@@ -1139,31 +1215,140 @@ export default function ProductDetail() {
                 </div>
                 <h3 className="text-lg font-semibold text-white">Activity Log</h3>
               </div>
-              <div className="space-y-6">
-                {[
-                  { color: 'bg-green-500', label: 'Product created', date: product?.createdAt },
-                  { color: 'bg-blue-500', label: 'Last updated', date: product?.updatedAt },
-                ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="flex gap-4"
-                  >
-                    <div className="flex flex-col items-center">
+              <div className="space-y-4">
+                {(() => {
+                  const activities = []
+                  const meta = product?.metadata || {}
+                  
+                  // Product lifecycle events
+                  if (product?.created_at) {
+                    activities.push({
+                      color: 'bg-green-500',
+                      icon: Plus,
+                      label: 'Product created',
+                      date: product.created_at,
+                      description: `Created "${product.name}"`
+                    })
+                  }
+                  
+                  // Status changes based on current status
+                  if (product?.status && product?.status !== 'new') {
+                    activities.push({
+                      color: 'bg-blue-500',
+                      icon: Package,
+                      label: `Status changed to "${product.status}"`,
+                      date: product.updated_at,
+                      description: 'Product status updated'
+                    })
+                  }
+                  
+                  // Banner generation started
+                  if (meta.automation_started_at) {
+                    activities.push({
+                      color: 'bg-purple-500',
+                      icon: Zap,
+                      label: 'Banner generation started',
+                      date: meta.automation_started_at,
+                      description: 'AI automation initiated'
+                    })
+                  }
+                  
+                  // Banner generation completed
+                  if (meta.automation_completed_at) {
+                    activities.push({
+                      color: 'bg-pink-500',
+                      icon: Sparkles,
+                      label: `Generated ${meta.automation_completed_banners || 10} banners`,
+                      date: meta.automation_completed_at,
+                      description: 'Banner generation completed successfully'
+                    })
+                  }
+                  
+                  // Banner generation stopped
+                  if (meta.automation_stopped_at) {
+                    activities.push({
+                      color: 'bg-yellow-500',
+                      icon: AlertCircle,
+                      label: 'Banner generation stopped',
+                      date: meta.automation_stopped_at,
+                      description: `Stopped at ${meta.automation_progress || 0}%`
+                    })
+                  }
+                  
+                  // Landing page generation
+                  if (meta.landing_page_started_at) {
+                    activities.push({
+                      color: 'bg-cyan-500',
+                      icon: Globe,
+                      label: 'Landing page generation started',
+                      date: meta.landing_page_started_at,
+                      description: 'Creating landing pages'
+                    })
+                  }
+                  
+                  if (meta.landing_page_completed_at) {
+                    activities.push({
+                      color: 'bg-teal-500',
+                      icon: CheckCircle2,
+                      label: 'Landing page generation completed',
+                      date: meta.landing_page_completed_at,
+                      description: 'Landing pages ready'
+                    })
+                  }
+                  
+                  // Product updated
+                  if (product?.updated_at && product?.updated_at !== product?.created_at) {
+                    activities.push({
+                      color: 'bg-blue-400',
+                      icon: FileText,
+                      label: 'Product updated',
+                      date: product.updated_at,
+                      description: 'Product details modified'
+                    })
+                  }
+                  
+                  // Sort by date (newest first)
+                  activities.sort((a, b) => new Date(b.date) - new Date(a.date))
+                  
+                  if (activities.length === 0) {
+                    return (
+                      <div className="text-center py-12 border-2 border-dashed border-dark-800 rounded-xl">
+                        <Clock className="w-12 h-12 mx-auto mb-3 text-dark-700" />
+                        <p className="text-dark-500">No activity yet</p>
+                      </div>
+                    )
+                  }
+                  
+                  return activities.map((item, i) => {
+                    const Icon = item.icon
+                    return (
                       <motion.div
-                        whileHover={{ scale: 1.2 }}
-                        className={`w-3 h-3 rounded-full ${item.color}`}
-                      />
-                      {i < 1 && <div className="w-px h-full bg-dark-800 my-2" />}
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{item.label}</p>
-                      <p className="text-sm text-dark-500">{formatDate(item.date)}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                        key={i}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="flex gap-4 pb-4 border-b border-dark-800 last:border-0 last:pb-0"
+                      >
+                        <div className="flex flex-col items-center">
+                          <motion.div
+                            whileHover={{ scale: 1.2 }}
+                            className={`w-8 h-8 rounded-lg ${item.color} bg-opacity-20 border border-current flex items-center justify-center`}
+                          >
+                            <Icon className={`w-4 h-4 ${item.color.replace('bg-', 'text-')}`} />
+                          </motion.div>
+                          {i < activities.length - 1 && (
+                            <div className="w-px flex-1 bg-dark-800 my-2" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium">{item.label}</p>
+                          <p className="text-sm text-dark-500">{item.description}</p>
+                          <p className="text-xs text-dark-600 mt-1">{formatDate(item.date)}</p>
+                        </div>
+                      </motion.div>
+                    )
+                  })
+                })()}
               </div>
             </motion.div>
           )}
