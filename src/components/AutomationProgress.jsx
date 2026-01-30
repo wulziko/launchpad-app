@@ -283,6 +283,33 @@ function StageItem({ stage, index, currentStage, isComplete }) {
 
 // Banner thumbnail with animation
 function BannerThumbnail({ banner, index, totalBanners }) {
+  const handleDownload = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      // Fetch the image as a blob
+      const response = await fetch(banner.url)
+      const blob = await response.blob()
+      
+      // Create a temporary download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = banner.name || `banner-${index + 1}.png`
+      document.body.appendChild(a)
+      a.click()
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Download failed:', error)
+      // Fallback: open in new tab
+      window.open(banner.url, '_blank')
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -298,7 +325,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
       <img 
         src={banner.url} 
         alt={banner.name || `Banner ${index + 1}`}
-        className="w-full aspect-video object-cover"
+        className="w-full aspect-square object-cover"
       />
       <motion.div 
         initial={{ opacity: 0 }}
@@ -320,16 +347,15 @@ function BannerThumbnail({ banner, index, totalBanners }) {
           >
             <ExternalLink className="w-3.5 h-3.5 text-white" />
           </motion.a>
-          <motion.a
-            href={banner.url}
-            download={banner.name || `banner-${index + 1}.png`}
+          <motion.button
+            onClick={handleDownload}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors"
             title="Download"
           >
             <Download className="w-3.5 h-3.5 text-white" />
-          </motion.a>
+          </motion.button>
         </div>
       </motion.div>
       
