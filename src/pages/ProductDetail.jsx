@@ -288,7 +288,7 @@ function AssetGallery({ banners, productImage }) {
   // Combine product image with banners for gallery
   const allImages = [
     ...(productImage ? [{ url: productImage, name: 'Product Image', type: 'product' }] : []),
-    ...(banners || []).map((b, i) => ({ url: b.url, name: b.name || `Banner ${i + 1}`, type: 'banner', id: b.id }))
+    ...(banners || []).map((b, i) => ({ url: b.file_url || b.url, name: b.name || `Banner ${i + 1}`, type: 'banner', id: b.id }))
   ]
   
   const openLightbox = (index) => {
@@ -1093,7 +1093,7 @@ export default function ProductDetail() {
                             for (let i = 0; i < productBanners.length; i++) {
                               const banner = productBanners[i]
                               try {
-                                const response = await fetch(banner.url)
+                                const response = await fetch(banner.file_url || banner.url)
                                 const blob = await response.blob()
                                 const url = window.URL.createObjectURL(blob)
                                 const a = document.createElement('a')
