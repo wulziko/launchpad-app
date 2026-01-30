@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
 import AutomationProgress from '../components/AutomationProgress'
+import LandingPageProgress from '../components/LandingPageProgress'
 import { triggerLandingPageGeneration } from '../lib/automation'
 import {
   ArrowLeft,
@@ -1148,89 +1149,65 @@ export default function ProductDetail() {
           )}
 
           {activeTab === 'landing' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="card"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Landing Page</h3>
-                </div>
-                <div className="flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="btn btn-secondary"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Preview
-                  </motion.button>
-                  <motion.button
-                    onClick={handleGenerateLanding}
-                    disabled={isGeneratingLanding}
-                    whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
-                    whileTap={{ scale: 0.98 }}
-                    className="btn btn-primary"
-                  >
-                    {isGeneratingLanding ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Starting...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4" />
-                        Generate
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </div>
+            <div className="space-y-6">
+              {/* Landing Page Progress */}
+              <LandingPageProgress product={product} />
 
+              {/* Generate Button Card */}
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={`p-4 rounded-xl mb-6 ${
-                  productLandingPage.status === 'ready'
-                    ? 'bg-green-500/10 border border-green-500/30'
-                    : productLandingPage.status === 'generating'
-                    ? 'bg-yellow-500/10 border border-yellow-500/30'
-                    : 'bg-dark-800/50 border border-dark-700'
-                }`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card"
               >
-                <p className={`text-sm font-medium ${
-                  productLandingPage.status === 'ready'
-                    ? 'text-green-400'
-                    : productLandingPage.status === 'generating'
-                    ? 'text-yellow-400'
-                    : 'text-dark-500'
-                }`}>
-                  Status: {productLandingPage.status === 'ready'
-                    ? '✅ Ready'
-                    : productLandingPage.status === 'generating'
-                    ? '⏳ Generating...'
-                    : '⏸️ Pending'}
-                </p>
-              </motion.div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Landing Pages</h3>
+                      <p className="text-xs text-dark-500">Generate AI-powered landing pages</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <motion.button
+                      onClick={handleGenerateLanding}
+                      disabled={isGeneratingLanding}
+                      whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
+                      whileTap={{ scale: 0.98 }}
+                      className="btn btn-primary"
+                    >
+                      {isGeneratingLanding ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Starting...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4" />
+                          Generate Landing Pages
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
 
-              {productLandingPage.html ? (
-                <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700">
-                  <pre className="text-xs text-dark-400 overflow-x-auto font-mono">
-                    {productLandingPage.html.substring(0, 500)}...
-                  </pre>
-                </div>
-              ) : (
-                <div className="text-center py-16 border-2 border-dashed border-dark-800 rounded-xl">
-                  <FileText className="w-16 h-16 mx-auto mb-4 text-dark-700" />
-                  <p className="text-dark-600">No landing page content yet</p>
-                  <p className="text-sm text-dark-700 mt-1">Click Generate to create one</p>
-                </div>
-              )}
-            </motion.div>
+                {/* Landing Pages List/Preview */}
+                {productLandingPage.html ? (
+                  <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700">
+                    <pre className="text-xs text-dark-400 overflow-x-auto font-mono">
+                      {productLandingPage.html.substring(0, 500)}...
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border-2 border-dashed border-dark-800 rounded-xl">
+                    <FileText className="w-12 h-12 mx-auto mb-3 text-dark-700" />
+                    <p className="text-dark-500">No landing pages generated yet</p>
+                    <p className="text-sm text-dark-600 mt-1">Click "Generate Landing Pages" to create them</p>
+                  </div>
+                )}
+              </motion.div>
+            </div>
           )}
 
           {activeTab === 'activity' && (
