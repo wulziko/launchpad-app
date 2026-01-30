@@ -283,13 +283,15 @@ function StageItem({ stage, index, currentStage, isComplete }) {
 
 // Banner thumbnail with animation
 function BannerThumbnail({ banner, index, totalBanners }) {
+  const bannerUrl = banner.file_url || banner.url
+  
   const handleDownload = async (e) => {
     e.preventDefault()
     e.stopPropagation()
     
     try {
       // Fetch the image as a blob
-      const response = await fetch(banner.url)
+      const response = await fetch(bannerUrl)
       const blob = await response.blob()
       
       // Create a temporary download link
@@ -306,7 +308,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
     } catch (error) {
       console.error('Download failed:', error)
       // Fallback: open in new tab
-      window.open(banner.url, '_blank')
+      window.open(bannerUrl, '_blank')
     }
   }
 
@@ -323,7 +325,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
       className="relative group rounded-xl overflow-hidden border border-dark-600 bg-dark-800 shadow-lg"
     >
       <img 
-        src={banner.url} 
+        src={bannerUrl} 
         alt={banner.name || `Banner ${index + 1}`}
         className="w-full aspect-square object-cover"
       />
@@ -337,7 +339,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
         </p>
         <div className="flex gap-1.5">
           <motion.a
-            href={banner.url}
+            href={bannerUrl}
             target="_blank"
             rel="noopener noreferrer"
             whileHover={{ scale: 1.1 }}
