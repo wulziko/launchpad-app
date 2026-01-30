@@ -552,83 +552,105 @@ function ProductCard({ product, statuses, onStatusChange, onDelete, index, isCel
         />
       )}
 
-      {/* Hover preview thumbnail */}
-      <AnimatePresence>
-        {isHovered && product.product_image_url && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
-            className="absolute -top-24 left-1/2 -translate-x-1/2 w-32 h-20 rounded-lg overflow-hidden border border-dark-600 shadow-xl z-30"
-          >
-            <img 
-              src={product.product_image_url} 
-              alt="" 
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Product Layout: Image + Content */}
+      <div className="flex gap-3 mb-3">
+        {/* Product Image Preview */}
+        <div className="flex-shrink-0">
+          {product.product_image_url || product.metadata?.product_image_url ? (
+            <div className="w-16 h-16 rounded-lg overflow-hidden border border-dark-600 bg-dark-900">
+              <img 
+                src={product.product_image_url || product.metadata?.product_image_url} 
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-lg border border-dark-600 bg-dark-900 flex items-center justify-center">
+              <Image className="w-6 h-6 text-dark-600" />
+            </div>
+          )}
+        </div>
 
-      <div className="relative flex items-start justify-between mb-3">
-        <Link 
-          to={`/products/${product.id}`} 
-          className="font-medium text-white hover:text-primary-400 transition-colors flex-1 line-clamp-1"
-        >
-          {product.name || 'Untitled Product'}
-        </Link>
-        <div className="relative">
-          <motion.button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-dark-700"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </motion.button>
-          <AnimatePresence>
-            {menuOpen && (
+        {/* Product Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between mb-1">
+            <Link 
+              to={`/products/${product.id}`} 
+              className="font-medium text-white hover:text-primary-400 transition-colors flex-1 line-clamp-1"
+            >
+              {product.name || 'Untitled Product'}
+            </Link>
+            <div className="relative">
+              <motion.button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-dark-700"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </motion.button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className="absolute right-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 min-w-[140px] overflow-hidden"
+                    >
+                      <Link
+                        to={`/products/${product.id}`}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-dark-300 hover:bg-dark-700 hover:text-white transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View Details
+                      </Link>
+                      <button
+                        onClick={() => { onDelete(product.id); setMenuOpen(false) }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Product Metadata */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-dark-500">
+            {product.niche && (
+              <span className="truncate">{product.niche}</span>
+            )}
+            {(product.country || product.metadata?.country) && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-xl shadow-xl py-1 min-w-[140px] overflow-hidden"
-                >
-                  <Link
-                    to={`/products/${product.id}`}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-dark-300 hover:bg-dark-700 hover:text-white transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    View Details
-                  </Link>
-                  <button
-                    onClick={() => { onDelete(product.id); setMenuOpen(false) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                </motion.div>
+                {product.niche && <span className="w-1 h-1 rounded-full bg-dark-600" />}
+                <span className="truncate">{product.country || product.metadata?.country}</span>
               </>
             )}
-          </AnimatePresence>
+            {product.created_at && (
+              <>
+                {(product.niche || product.country || product.metadata?.country) && (
+                  <span className="w-1 h-1 rounded-full bg-dark-600" />
+                )}
+                <span className="truncate">
+                  {new Date(product.created_at).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <p className="text-sm text-dark-500 mb-3 line-clamp-2">{product.description || 'No description'}</p>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-dark-500">
-          <span>{product.market || '-'}</span>
-          {product.niche && (
-            <>
-              <span className="w-1 h-1 rounded-full bg-dark-600" />
-              <span className="truncate max-w-[80px]">{product.niche}</span>
-            </>
-          )}
-        </div>
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex-1" />
         
         {/* Status Dropdown */}
         <div className="relative">
