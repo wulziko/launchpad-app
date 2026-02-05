@@ -4,14 +4,22 @@ import { useAuth } from './AuthContext'
 
 const DataContext = createContext(null)
 
-// Status workflow
+// Status workflow - Complete automation pipeline
 export const STATUSES = [
   { id: 'new', label: 'New', color: 'bg-dark-600', textColor: 'text-dark-300' },
-  { id: 'banner_gen', label: 'Banner Generation', color: 'bg-blue-600', textColor: 'text-blue-100' },
-  { id: 'landing_page', label: 'Landing Page', color: 'bg-purple-600', textColor: 'text-purple-100' },
-  { id: 'review', label: 'Review', color: 'bg-yellow-600', textColor: 'text-yellow-100' },
-  { id: 'ready', label: 'Ready to Launch', color: 'bg-green-600', textColor: 'text-green-100' },
-  { id: 'live', label: 'Live', color: 'bg-primary-600', textColor: 'text-primary-100' },
+  { id: 'researching', label: '📊 Researching', color: 'bg-blue-600', textColor: 'text-blue-100' },
+  { id: 'review', label: '👀 Review Research', color: 'bg-yellow-600', textColor: 'text-yellow-100' },
+  { id: 'approved', label: '✅ Approved', color: 'bg-green-600', textColor: 'text-green-100' },
+  { id: 'banner_gen', label: '🎨 Generating Creatives', color: 'bg-purple-600', textColor: 'text-purple-100' },
+  { id: 'creatives_complete', label: '🎨 Creatives Ready', color: 'bg-purple-500', textColor: 'text-purple-100' },
+  { id: 'landing_page', label: '📄 Generating Pages', color: 'bg-indigo-600', textColor: 'text-indigo-100' },
+  { id: 'pages_complete', label: '📄 Pages Ready', color: 'bg-indigo-500', textColor: 'text-indigo-100' },
+  { id: 'deploying', label: '🛍️ Deploying to Shopify', color: 'bg-cyan-600', textColor: 'text-cyan-100' },
+  { id: 'shopify_deployed', label: '🛍️ On Shopify', color: 'bg-cyan-500', textColor: 'text-cyan-100' },
+  { id: 'generating_reviews', label: '⭐ Generating Reviews', color: 'bg-pink-600', textColor: 'text-pink-100' },
+  { id: 'reviews_complete', label: '⭐ Reviews Ready', color: 'bg-pink-500', textColor: 'text-pink-100' },
+  { id: 'ready', label: '🚀 Ready for Meta', color: 'bg-green-500', textColor: 'text-green-100' },
+  { id: 'live', label: '🔥 Live', color: 'bg-primary-600', textColor: 'text-primary-100' },
   { id: 'paused', label: 'Paused', color: 'bg-orange-600', textColor: 'text-orange-100' },
 ]
 
