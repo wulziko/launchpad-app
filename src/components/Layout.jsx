@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Automations', href: '/automations', icon: Zap },
   { name: 'Assets', href: '/assets', icon: Image },
   { name: 'Converter', href: '/converter', icon: FileCode },
+  { name: '🤖 AI Dashboard', href: '/ai-dashboard', icon: Sparkles },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
