@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../lib/supabase'
 import {
   Sparkles,
   TrendingUp,
@@ -17,6 +18,7 @@ import {
   BarChart3,
   FileText,
   Zap,
+  Copy,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
@@ -100,18 +102,21 @@ function RecommendationBadge({ recommendation }) {
 }
 
 // Section card wrapper
-function ResearchSection({ icon: Icon, title, children, iconColor = 'text-primary-400', iconBg = 'bg-primary-500/10' }) {
+function ResearchSection({ icon: Icon, title, children, iconColor = 'text-primary-400', iconBg = 'bg-primary-500/10', action }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="card"
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center`}>
+            <Icon className={`w-5 h-5 ${iconColor}`} />
+          </div>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
         </div>
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
+        {action && <div>{action}</div>}
       </div>
       <div className="text-dark-300 space-y-3">
         {children}
@@ -122,10 +127,13 @@ function ResearchSection({ icon: Icon, title, children, iconColor = 'text-primar
 
 export default function ResearchPanel({ product, onTriggerResearch }) {
   const [isStarting, setIsStarting] = useState(false)
+  const [liveResearch, setLiveResearch] = useState(product?.metadata?.research)
+  const [copiedSection, setCopiedSection] = useState(null)
   
-  const research = product?.metadata?.research
+  // Use live research data if available, fallback to product data
+  const research = liveResearch || product?.metadata?.research
   const hasResearch = research && research.report
-  const isGenerating = research?.status === 'generating' || research?.progress < 100
+  const isGenerating = research?.status === 'generating' || (research?.progress > 0 && research?.progress < 100)
   const progress = research?.progress || 0
 
   const handleStart = async () => {
@@ -137,6 +145,64 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
       alert('Failed to start research: ' + err.message)
     } finally {
       setIsStarting(false)
+    }
+  }
+
+  // Real-time polling for research progress
+  useEffect(() => {
+    if (!product?.id || !isGenerating) return
+
+    console.log('[ResearchPanel] Starting real-time polling for product:', product.id)
+
+    // Poll every 2 seconds while research is active
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('metadata')
+          .eq('id', product.id)
+          .single()
+
+        if (error) throw error
+
+        if (data?.metadata?.research) {
+          const updatedResearch = data.metadata.research
+          console.log('[ResearchPanel] Progress update:', updatedResearch.progress, updatedResearch.status)
+          setLiveResearch(updatedResearch)
+
+          // Stop polling if complete
+          if (updatedResearch.progress >= 100 || updatedResearch.status === 'completed') {
+            console.log('[ResearchPanel] Research complete, stopping poll')
+            clearInterval(pollInterval)
+          }
+        }
+      } catch (err) {
+        console.error('[ResearchPanel] Failed to poll research status:', err)
+      }
+    }, 2000)
+
+    return () => {
+      console.log('[ResearchPanel] Cleaning up poll interval')
+      clearInterval(pollInterval)
+    }
+  }, [product?.id, isGenerating])
+
+  // Update local state when product prop changes
+  useEffect(() => {
+    if (product?.metadata?.research) {
+      setLiveResearch(product.metadata.research)
+    }
+  }, [product?.metadata?.research])
+
+  // Copy text to clipboard with feedback
+  const copyToClipboard = async (text, sectionName) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedSection(sectionName)
+      setTimeout(() => setCopiedSection(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      alert('Failed to copy to clipboard')
     }
   }
 
@@ -275,6 +341,26 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
           title="Selling Angles"
           iconColor="text-green-400"
           iconBg="bg-green-500/10"
+          action={
+            <motion.button
+              onClick={() => copyToClipboard(research.sellingAngles, 'sellingAngles')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white rounded-lg transition-colors"
+            >
+              {copiedSection === 'sellingAngles' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy All
+                </>
+              )}
+            </motion.button>
+          }
         >
           <ReactMarkdown className="prose prose-invert prose-sm max-w-none">
             {research.sellingAngles}
@@ -289,6 +375,26 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
           title="Creative Recommendations"
           iconColor="text-yellow-400"
           iconBg="bg-yellow-500/10"
+          action={
+            <motion.button
+              onClick={() => copyToClipboard(research.creativeRecommendations, 'creativeRecommendations')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white rounded-lg transition-colors"
+            >
+              {copiedSection === 'creativeRecommendations' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy All
+                </>
+              )}
+            </motion.button>
+          }
         >
           <ReactMarkdown className="prose prose-invert prose-sm max-w-none">
             {research.creativeRecommendations}
@@ -303,6 +409,26 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
           title="Customer Pain Points"
           iconColor="text-pink-400"
           iconBg="bg-pink-500/10"
+          action={
+            <motion.button
+              onClick={() => copyToClipboard(research.painPoints, 'painPoints')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white rounded-lg transition-colors"
+            >
+              {copiedSection === 'painPoints' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy All
+                </>
+              )}
+            </motion.button>
+          }
         >
           <ReactMarkdown className="prose prose-invert prose-sm max-w-none">
             {research.painPoints}
