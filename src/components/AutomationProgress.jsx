@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useToast } from './Toast'
 import { subscribeToAutomationUpdates, getAutomationStatus, triggerBannerGeneration, stopAutomation, resumeAutomation } from '../lib/automation'
 import { 
   Loader2, 
@@ -377,6 +378,7 @@ function BannerThumbnail({ banner, index, totalBanners }) {
 }
 
 export default function AutomationProgress({ product, onStatusChange, showBanners = true }) {
+  const toast = useToast()
   const [status, setStatus] = useState(null)
   const [isTriggering, setIsTriggering] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -385,6 +387,7 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
   const [showConfetti, setShowConfetti] = useState(false)
   const [logs, setLogs] = useState([])
   const prevStatusRef = useRef(null)
+  const hasNotifiedCompleteRef = useRef(false)
 
   const currentStage = getStageFromMessage(status?.message, status?.progress)
   const isProcessing = status?.status === 'processing'
@@ -429,6 +432,16 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
       if (update.status === 'completed' && prevStatusRef.current?.status !== 'completed') {
         setShowConfetti(true)
         setTimeout(() => setShowConfetti(false), 3000)
+        
+        // Show toast notification (only once)
+        if (!hasNotifiedCompleteRef.current) {
+          hasNotifiedCompleteRef.current = true
+          const bannerCount = update.banners?.length || 0
+          toast.success(`${bannerCount} banner${bannerCount !== 1 ? 's' : ''} generated!`, {
+            title: '🎨 Banners Complete!',
+            duration: 5000
+          })
+        }
       }
       
       prevStatusRef.current = update
@@ -440,6 +453,7 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
   const handleTrigger = async () => {
     setIsTriggering(true)
     setLogs([{ time: new Date(), message: 'Initiating automation...' }])
+    hasNotifiedCompleteRef.current = false
     
     // Optimistically update UI immediately for instant feedback
     setStatus(prev => ({
@@ -453,6 +467,10 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
     try {
       await triggerBannerGeneration(product)
       // Subscription will sync the real state from backend
+      toast.success('Banner generation started!', {
+        title: '🎨 AI Automation Started',
+        duration: 3000
+      })
     } catch (error) {
       console.error('Failed to trigger automation:', error)
       setLogs(prev => [...prev, { time: new Date(), message: `Error: ${error.message}` }])
@@ -462,6 +480,10 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
         status: 'error',
         message: error.message
       }))
+      toast.error(error.message || 'Failed to start banner generation', {
+        title: 'Generation Failed',
+        duration: 5000
+      })
     } finally {
       setIsTriggering(false)
     }
@@ -482,9 +504,17 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
     try {
       await stopAutomation(product.id)
       setLogs(prev => [...prev, { time: new Date(), message: 'Automation stopped by user' }])
+      toast.info('Banner generation stopped', {
+        title: 'Automation Paused',
+        duration: 3000
+      })
     } catch (error) {
       console.error('Failed to stop automation:', error)
       setLogs(prev => [...prev, { time: new Date(), message: `Stop failed: ${error.message}` }])
+      toast.error(error.message || 'Failed to stop automation', {
+        title: 'Stop Failed',
+        duration: 4000
+      })
     } finally {
       setIsStopping(false)
     }
@@ -504,6 +534,10 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
     try {
       await resumeAutomation(product)
       setLogs(prev => [...prev, { time: new Date(), message: 'Automation resumed' }])
+      toast.success('Resuming banner generation', {
+        title: 'Automation Resumed',
+        duration: 3000
+      })
     } catch (error) {
       console.error('Failed to resume automation:', error)
       setLogs(prev => [...prev, { time: new Date(), message: `Resume failed: ${error.message}` }])
@@ -513,6 +547,10 @@ export default function AutomationProgress({ product, onStatusChange, showBanner
         status: 'error',
         message: error.message
       }))
+      toast.error(error.message || 'Failed to resume automation', {
+        title: 'Resume Failed',
+        duration: 4000
+      })
     } finally {
       setIsResuming(false)
     }

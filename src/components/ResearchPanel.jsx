@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
+import { useToast } from './Toast'
 import {
   Sparkles,
   TrendingUp,
@@ -126,9 +127,11 @@ function ResearchSection({ icon: Icon, title, children, iconColor = 'text-primar
 }
 
 export default function ResearchPanel({ product, onTriggerResearch }) {
+  const toast = useToast()
   const [isStarting, setIsStarting] = useState(false)
   const [liveResearch, setLiveResearch] = useState(product?.metadata?.research)
   const [copiedSection, setCopiedSection] = useState(null)
+  const [hasNotifiedComplete, setHasNotifiedComplete] = useState(false)
   
   // Use live research data if available, fallback to product data
   const research = liveResearch || product?.metadata?.research
@@ -138,11 +141,19 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
 
   const handleStart = async () => {
     setIsStarting(true)
+    setHasNotifiedComplete(false)
     try {
       await onTriggerResearch?.(product.id)
+      toast.success('Research started!', {
+        title: 'AI Analysis Starting',
+        duration: 3000
+      })
     } catch (err) {
       console.error('Failed to start research:', err)
-      alert('Failed to start research: ' + err.message)
+      toast.error(err.message || 'Failed to start research', {
+        title: 'Research Failed',
+        duration: 5000
+      })
     } finally {
       setIsStarting(false)
     }
@@ -174,6 +185,18 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
           if (updatedResearch.progress >= 100 || updatedResearch.status === 'completed') {
             console.log('[ResearchPanel] Research complete, stopping poll')
             clearInterval(pollInterval)
+            
+            // Show completion notification (only once)
+            if (!hasNotifiedComplete) {
+              setHasNotifiedComplete(true)
+              const score = updatedResearch.score || 0
+              const recommendation = updatedResearch.recommendation || 'MODERATE'
+              
+              toast.success(`Score: ${score}/10 - ${recommendation}`, {
+                title: '✨ Research Complete!',
+                duration: 6000
+              })
+            }
           }
         }
       } catch (err) {
@@ -185,7 +208,7 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
       console.log('[ResearchPanel] Cleaning up poll interval')
       clearInterval(pollInterval)
     }
-  }, [product?.id, isGenerating])
+  }, [product?.id, isGenerating, hasNotifiedComplete, toast])
 
   // Update local state when product prop changes
   useEffect(() => {
@@ -200,9 +223,21 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
       await navigator.clipboard.writeText(text)
       setCopiedSection(sectionName)
       setTimeout(() => setCopiedSection(null), 2000)
+      
+      // Show toast notification
+      const labels = {
+        sellingAngles: 'Selling Angles',
+        creativeRecommendations: 'Creative Recommendations',
+        painPoints: 'Pain Points'
+      }
+      toast.success(`${labels[sectionName] || 'Content'} copied to clipboard!`, {
+        duration: 2000
+      })
     } catch (err) {
       console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
+      toast.error('Failed to copy to clipboard', {
+        duration: 3000
+      })
     }
   }
 
