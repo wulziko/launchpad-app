@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
+import ErrorBoundary from '../components/ErrorBoundary'
 import ResearchPanel from '../components/ResearchPanel'
 import { triggerProductResearch } from '../lib/research'
 import AutomationProgress from '../components/AutomationProgress'
@@ -1079,11 +1080,13 @@ export default function ProductDetail() {
 
           {activeTab === 'banners' && (
             <div className="space-y-6">
-              <AutomationProgress
-                product={product}
-                onStatusChange={(update) => console.log('Automation update:', update)}
-                showBanners={false}
-              />
+              <ErrorBoundary>
+                <AutomationProgress
+                  product={product}
+                  onStatusChange={(update) => console.log('Automation update:', update)}
+                  showBanners={false}
+                />
+              </ErrorBoundary>
               
               {/* Banner Gallery */}
               <motion.div
@@ -1152,22 +1155,26 @@ export default function ProductDetail() {
           )}
 
           {activeTab === 'research' && (
-            <ResearchPanel 
-              product={product}
-              onTriggerResearch={async () => {
-                try {
-                  await triggerProductResearch(product)
-                } catch (err) {
-                  throw err
-                }
-              }}
-            />
+            <ErrorBoundary>
+              <ResearchPanel 
+                product={product}
+                onTriggerResearch={async () => {
+                  try {
+                    await triggerProductResearch(product)
+                  } catch (err) {
+                    throw err
+                  }
+                }}
+              />
+            </ErrorBoundary>
           )}
 
           {activeTab === 'landing' && (
             <div className="space-y-6">
               {/* Landing Page Progress */}
-              <LandingPageProgress product={product} />
+              <ErrorBoundary>
+                <LandingPageProgress product={product} />
+              </ErrorBoundary>
 
               {/* Generate Button Card */}
               <motion.div
