@@ -25,6 +25,8 @@ import {
   Package,
   Star,
   Zap,
+  CheckCircle2,
+  Check,
 } from 'lucide-react'
 
 // Card animation variants
@@ -89,6 +91,8 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [showBulkMenu, setShowBulkMenu] = useState(false)
   const [celebratingCard, setCelebratingCard] = useState(null)
   const { products, STATUSES, updateProductStatus, addProduct, deleteProduct, loading, error } = useData()
 
@@ -131,6 +135,47 @@ export default function Products() {
       await deleteProduct(productId)
     } catch (err) {
       console.error('Failed to delete product:', err)
+    }
+  }
+
+  // Bulk actions
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredProducts.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredProducts.map(p => p.id))
+    }
+  }
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const handleBulkStatusChange = async (newStatus) => {
+    if (!selectedIds.length) return
+    
+    try {
+      await Promise.all(selectedIds.map(id => updateProductStatus(id, newStatus)))
+      setSelectedIds([])
+      setShowBulkMenu(false)
+    } catch (err) {
+      console.error('Bulk status update failed:', err)
+      alert('Failed to update some products')
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return
+    if (!window.confirm(`Delete ${selectedIds.length} product(s)?`)) return
+    
+    try {
+      await Promise.all(selectedIds.map(id => deleteProduct(id)))
+      setSelectedIds([])
+    } catch (err) {
+      console.error('Bulk delete failed:', err)
+      alert('Failed to delete some products')
     }
   }
 
@@ -250,6 +295,103 @@ export default function Products() {
           </motion.button>
         </motion.div>
       </motion.div>
+
+      {/* Bulk Actions Toolbar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -10, height: 0 }}
+            className="bg-primary-500/10 border border-primary-500/20 rounded-xl p-4 flex items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <motion.button
+                onClick={handleSelectAll}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 hover:bg-primary-500/20 rounded-lg transition-colors"
+              >
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                  selectedIds.length === filteredProducts.length 
+                    ? 'bg-primary-500 border-primary-500' 
+                    : 'border-primary-400'
+                }`}>
+                  {selectedIds.length > 0 && (
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                  )}
+                </div>
+              </motion.button>
+              <span className="text-sm font-medium text-white">
+                {selectedIds.length} selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Change Status Dropdown */}
+              <div className="relative">
+                <motion.button
+                  onClick={() => setShowBulkMenu(!showBulkMenu)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Change Status
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </motion.button>
+
+                <AnimatePresence>
+                  {showBulkMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowBulkMenu(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        className="absolute top-full mt-2 right-0 z-20 w-56 bg-dark-800 border border-dark-700 rounded-xl shadow-xl overflow-hidden"
+                      >
+                        <div className="max-h-64 overflow-y-auto py-1">
+                          {STATUSES.map(status => (
+                            <button
+                              key={status.id}
+                              onClick={() => handleBulkStatusChange(status.id)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-dark-700 transition-colors text-dark-300"
+                            >
+                              <div className={`w-2 h-2 rounded-full ${status.color}`} />
+                              {status.label}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Delete Button */}
+              <motion.button
+                onClick={handleBulkDelete}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn btn-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </motion.button>
+
+              {/* Clear Selection */}
+              <motion.button
+                onClick={() => setSelectedIds([])}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 text-dark-400" />
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Toolbar */}
       <motion.div
