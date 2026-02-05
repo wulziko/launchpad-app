@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase'
+import { fetchWithRetry } from './retry'
 
 // API proxy endpoints (avoids CORS issues)
 // Uses Vercel serverless functions to proxy to n8n
@@ -68,18 +69,24 @@ export const triggerBannerGeneration = async (product) => {
       status: product.status || 'new'
     }
 
-    // Trigger banner generation via API proxy (avoids CORS)
-    const response = await fetch(BANNER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    // Trigger banner generation via API proxy (avoids CORS) with retry logic
+    const response = await fetchWithRetry(
+      BANNER_API_URL,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
       },
-      body: JSON.stringify(payload)
-    })
-
-    if (!response.ok) {
-      throw new Error(`n8n webhook failed: ${response.statusText}`)
-    }
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
+        onRetry: (attempt, max, delay) => {
+          console.log(`[Banner Gen] Retry ${attempt}/${max} in ${delay}ms...`)
+        }
+      }
+    )
 
     return { success: true, message: 'Banner generation started!' }
   } catch (error) {
@@ -466,16 +473,22 @@ export const triggerLandingPageGeneration = async (product) => {
       status: product.status || 'landing_page'
     }
 
-    // Trigger via API proxy
-    const response = await fetch('/api/trigger-landing-pages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-
-    if (!response.ok) {
-      throw new Error(`Landing page generation failed: ${response.statusText}`)
-    }
+    // Trigger via API proxy with retry logic
+    const response = await fetchWithRetry(
+      '/api/trigger-landing-pages',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      },
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
+        onRetry: (attempt, max, delay) => {
+          console.log(`[Landing Page] Retry ${attempt}/${max} in ${delay}ms...`)
+        }
+      }
+    )
 
     return { success: true, message: 'Landing page generation started!' }
   } catch (error) {

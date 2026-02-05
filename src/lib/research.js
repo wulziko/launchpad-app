@@ -1,4 +1,5 @@
 // Research automation utilities
+import { fetchWithRetry } from './retry'
 
 const N8N_RESEARCH_WEBHOOK = 'https://n8n.srv1300789.hstgr.cloud/webhook/launchpad-research'
 
@@ -27,19 +28,23 @@ export async function triggerProductResearch(product) {
 
   console.log('[Research] Triggering research for product:', product.id, payload)
 
-  const response = await fetch(N8N_RESEARCH_WEBHOOK, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithRetry(
+    N8N_RESEARCH_WEBHOOK,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    console.error('[Research] Failed to trigger:', error)
-    throw new Error(`Failed to trigger research: ${response.statusText}`)
-  }
+    {
+      maxRetries: 3,
+      baseDelay: 1000,
+      onRetry: (attempt, max, delay) => {
+        console.log(`[Research] Retry ${attempt}/${max} in ${delay}ms...`)
+      }
+    }
+  )
 
   const data = await response.json()
   console.log('[Research] Triggered successfully:', data)
@@ -53,20 +58,23 @@ export async function triggerProductResearch(product) {
  * @returns {Promise<Object>}
  */
 export async function stopProductResearch(productId) {
-  const response = await fetch(N8N_RESEARCH_WEBHOOK, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithRetry(
+    N8N_RESEARCH_WEBHOOK,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'stop',
+        productId,
+      }),
     },
-    body: JSON.stringify({
-      action: 'stop',
-      productId,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to stop research: ${response.statusText}`)
-  }
+    {
+      maxRetries: 2,
+      baseDelay: 500,
+    }
+  )
 
   return response.json()
 }
