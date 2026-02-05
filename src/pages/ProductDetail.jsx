@@ -4,6 +4,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
+import ResearchPanel from '../components/ResearchPanel'
+import { triggerProductResearch } from '../lib/research'
 import AutomationProgress from '../components/AutomationProgress'
 import LandingPageProgress from '../components/LandingPageProgress'
 import { triggerLandingPageGeneration } from '../lib/automation'
@@ -605,6 +607,7 @@ export default function ProductDetail() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: FileText },
+    { id: 'research', label: 'Research', icon: Sparkles },
     { id: 'banners', label: 'Banners', icon: Image, count: productBanners.length },
     { id: 'landing', label: 'Landing Page', icon: Globe },
     { id: 'activity', label: 'Activity', icon: Clock },
@@ -1146,6 +1149,19 @@ export default function ProductDetail() {
                 />
               </motion.div>
             </div>
+          )}
+
+          {activeTab === 'research' && (
+            <ResearchPanel 
+              product={product}
+              onTriggerResearch={async () => {
+                try {
+                  await triggerProductResearch(product)
+                } catch (err) {
+                  throw err
+                }
+              }}
+            />
           )}
 
           {activeTab === 'landing' && (
