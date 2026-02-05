@@ -87,15 +87,24 @@ export default function Products() {
   const [view, setView] = useState('kanban')
   const [showNewModal, setShowNewModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [celebratingCard, setCelebratingCard] = useState(null)
   const { products, STATUSES, updateProductStatus, addProduct, deleteProduct, loading, error } = useData()
 
   const filteredProducts = (products || []).filter(p => {
     if (!p) return false
+    
+    // Search filter
     const name = p.name?.toLowerCase() || ''
     const niche = p.niche?.toLowerCase() || ''
     const query = searchQuery.toLowerCase()
-    return name.includes(query) || niche.includes(query)
+    const matchesSearch = name.includes(query) || niche.includes(query)
+    
+    // Status filter
+    const matchesStatus = filterStatus === 'all' || p.status === filterStatus
+    
+    return matchesSearch && matchesStatus
   })
 
   const getProductsByStatus = (statusId) => {
@@ -260,16 +269,90 @@ export default function Products() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-12"
           />
+          {searchQuery && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-dark-700 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4 text-dark-400 hover:text-white" />
+            </motion.button>
+          )}
         </div>
         <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="btn btn-secondary"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-          </motion.button>
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <motion.button
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`btn ${filterStatus !== 'all' ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <Filter className="w-4 h-4" />
+              {filterStatus === 'all' ? 'Filter' : STATUSES.find(s => s.id === filterStatus)?.label || 'Filter'}
+              {filterStatus !== 'all' && (
+                <span className="ml-1 px-1.5 py-0.5 bg-primary-500/20 rounded text-xs">1</span>
+              )}
+            </motion.button>
+            
+            <AnimatePresence>
+              {showFilterMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowFilterMenu(false)} 
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full mt-2 right-0 z-20 w-64 bg-dark-800 border border-dark-700 rounded-xl shadow-xl overflow-hidden"
+                  >
+                    <div className="p-2 border-b border-dark-700">
+                      <p className="text-xs font-semibold text-dark-400 px-2 py-1">Filter by Status</p>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto py-1">
+                      <button
+                        onClick={() => {
+                          setFilterStatus('all')
+                          setShowFilterMenu(false)
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-dark-700 transition-colors ${
+                          filterStatus === 'all' ? 'text-primary-400 bg-dark-700/50' : 'text-dark-300'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${filterStatus === 'all' ? 'bg-primary-500' : 'bg-dark-600'}`} />
+                        All Products
+                        <span className="ml-auto text-xs text-dark-500">{products.length}</span>
+                      </button>
+                      {STATUSES.map((status) => {
+                        const count = products.filter(p => p.status === status.id).length
+                        return (
+                          <button
+                            key={status.id}
+                            onClick={() => {
+                              setFilterStatus(status.id)
+                              setShowFilterMenu(false)
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-dark-700 transition-colors ${
+                              filterStatus === status.id ? 'text-white bg-dark-700/50' : 'text-dark-300'
+                            }`}
+                          >
+                            <div className={`w-2 h-2 rounded-full ${status.color}`} />
+                            {status.label}
+                            <span className="ml-auto text-xs text-dark-500">{count}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
           <div className="flex bg-dark-800/50 border border-dark-700 rounded-xl p-1">
             <motion.button
               onClick={() => setView('kanban')}
@@ -317,7 +400,7 @@ export default function Products() {
           </motion.div>
         )}
 
-        {filteredProducts.length === 0 && searchQuery && (
+        {filteredProducts.length === 0 && (searchQuery || filterStatus !== 'all') && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -325,7 +408,26 @@ export default function Products() {
             className="text-center py-12"
           >
             <Search className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <p className="text-dark-400">No products match "{searchQuery}"</p>
+            <p className="text-dark-400 mb-3">
+              {searchQuery && filterStatus !== 'all' 
+                ? `No products match "${searchQuery}" with status "${STATUSES.find(s => s.id === filterStatus)?.label}"`
+                : searchQuery 
+                  ? `No products match "${searchQuery}"`
+                  : `No products with status "${STATUSES.find(s => s.id === filterStatus)?.label}"`
+              }
+            </p>
+            <motion.button
+              onClick={() => {
+                setSearchQuery('')
+                setFilterStatus('all')
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-secondary btn-sm"
+            >
+              <X className="w-4 h-4" />
+              Clear Filters
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
