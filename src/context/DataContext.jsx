@@ -44,6 +44,88 @@ export function DataProvider({ children }) {
     }
   }, [isAuthenticated, user])
 
+  // Real-time subscriptions for live updates
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    console.log('[DataContext] Setting up real-time subscriptions')
+
+    // Subscribe to product updates
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+        },
+        (payload) => {
+          console.log('[DataContext] Product updated:', payload.new.id)
+          const updatedProduct = formatProduct(payload.new)
+          setProducts(prev => prev.map(p => 
+            p.id === payload.new.id ? updatedProduct : p
+          ))
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'products',
+        },
+        (payload) => {
+          console.log('[DataContext] Product created:', payload.new.id)
+          const newProduct = formatProduct(payload.new)
+          setProducts(prev => [newProduct, ...prev])
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'products',
+        },
+        (payload) => {
+          console.log('[DataContext] Product deleted:', payload.old.id)
+          setProducts(prev => prev.filter(p => p.id !== payload.old.id))
+        }
+      )
+      .subscribe()
+
+    // Subscribe to asset updates (for banners/landing pages)
+    const assetsChannel = supabase
+      .channel('assets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assets',
+        },
+        (payload) => {
+          console.log('[DataContext] Asset change:', payload.eventType, payload.new?.id || payload.old?.id)
+          if (payload.eventType === 'INSERT') {
+            setAssets(prev => [payload.new, ...prev])
+          } else if (payload.eventType === 'UPDATE') {
+            setAssets(prev => prev.map(a => a.id === payload.new.id ? payload.new : a))
+          } else if (payload.eventType === 'DELETE') {
+            setAssets(prev => prev.filter(a => a.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[DataContext] Cleaning up real-time subscriptions')
+      supabase.removeChannel(productsChannel)
+      supabase.removeChannel(assetsChannel)
+    }
+  }, [isAuthenticated, user])
+
   const fetchAllData = async () => {
     setLoading(true)
     setError(null)
