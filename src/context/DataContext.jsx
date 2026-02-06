@@ -44,6 +44,19 @@ export function DataProvider({ children }) {
     }
   }, [isAuthenticated, user])
 
+  // Fallback polling if real-time doesn't work
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    // Poll every 5 seconds as fallback
+    const pollInterval = setInterval(() => {
+      console.log('[DataContext] Polling for updates (fallback)')
+      fetchAllData()
+    }, 5000)
+
+    return () => clearInterval(pollInterval)
+  }, [isAuthenticated, user])
+
   // Real-time subscriptions for live updates
   useEffect(() => {
     if (!isAuthenticated || !user) return
@@ -402,26 +415,32 @@ export function DataProvider({ children }) {
   }, [products])
 
   // Format database product to frontend format
-  const formatProduct = (dbProduct) => ({
-    id: dbProduct.id,
-    name: dbProduct.name,
-    description: dbProduct.description,
-    status: dbProduct.status,
-    market: dbProduct.target_market,
-    niche: dbProduct.niche,
-    notes: dbProduct.notes || '',
-    tags: dbProduct.metadata?.tags || [],
-    targetAudience: dbProduct.metadata?.targetAudience || '',
-    language: dbProduct.metadata?.language || 'English',
-    country: dbProduct.metadata?.country || 'United States',
-    gender: dbProduct.metadata?.gender || 'All',
-    aliexpress_link: dbProduct.metadata?.aliexpress_link || '',
-    amazon_link: dbProduct.metadata?.amazon_link || '',
-    competitor_link_1: dbProduct.metadata?.competitor_link_1 || '',
-    competitor_link_2: dbProduct.metadata?.competitor_link_2 || '',
-    product_image_url: dbProduct.metadata?.product_image_url || '',
-    createdAt: dbProduct.created_at,
-    updatedAt: dbProduct.updated_at,
+  const formatProduct = (dbProduct) => {
+    // Debug logging to track product_image_url
+    if (dbProduct.id && !dbProduct.metadata?.product_image_url) {
+      console.warn('[formatProduct] Missing product_image_url for product:', dbProduct.id, 'metadata:', dbProduct.metadata)
+    }
+    
+    return {
+      id: dbProduct.id,
+      name: dbProduct.name,
+      description: dbProduct.description,
+      status: dbProduct.status,
+      market: dbProduct.target_market,
+      niche: dbProduct.niche,
+      notes: dbProduct.notes || '',
+      tags: dbProduct.metadata?.tags || [],
+      targetAudience: dbProduct.metadata?.targetAudience || '',
+      language: dbProduct.metadata?.language || 'English',
+      country: dbProduct.metadata?.country || 'United States',
+      gender: dbProduct.metadata?.gender || 'All',
+      aliexpress_link: dbProduct.metadata?.aliexpress_link || '',
+      amazon_link: dbProduct.metadata?.amazon_link || '',
+      competitor_link_1: dbProduct.metadata?.competitor_link_1 || '',
+      competitor_link_2: dbProduct.metadata?.competitor_link_2 || '',
+      product_image_url: dbProduct.metadata?.product_image_url || dbProduct.product_image_url || '', // Try metadata first, then top-level column
+      createdAt: dbProduct.created_at,
+      updatedAt: dbProduct.updated_at,
     
     // Automation status (from metadata)
     automationStatus: dbProduct.metadata?.automation_status || 'idle',
@@ -435,10 +454,11 @@ export function DataProvider({ children }) {
     // Pass through full metadata for access to other fields
     metadata: dbProduct.metadata || {},
     
-    // These will be populated from assets
-    banners: [],
-    landingPage: { html: '', status: 'pending' },
-  })
+      // These will be populated from assets
+      banners: [],
+      landingPage: { html: '', status: 'pending' },
+    }
+  }
 
   const value = {
     // Data

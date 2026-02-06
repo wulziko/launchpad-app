@@ -165,7 +165,7 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
 
     console.log('[ResearchPanel] Starting real-time polling for product:', product.id)
 
-    // Poll every 2 seconds while research is active
+    // Poll every 1 second while research is active for smoother updates
     const pollInterval = setInterval(async () => {
       try {
         const { data, error } = await supabase
@@ -202,7 +202,7 @@ export default function ResearchPanel({ product, onTriggerResearch }) {
       } catch (err) {
         console.error('[ResearchPanel] Failed to poll research status:', err)
       }
-    }, 2000)
+    }, 1000) // Poll every 1 second for smooth progress updates
 
     return () => {
       console.log('[ResearchPanel] Cleaning up poll interval')
