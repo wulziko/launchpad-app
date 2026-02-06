@@ -468,10 +468,10 @@ export default function Products() {
                       >
                         <div className={`w-2 h-2 rounded-full ${filterStatus === 'all' ? 'bg-primary-500' : 'bg-dark-600'}`} />
                         All Products
-                        <span className="ml-auto text-xs text-dark-500">{products.length}</span>
+                        <span className="ml-auto text-xs text-dark-500">{(products || []).length}</span>
                       </button>
                       {STATUSES.map((status) => {
-                        const count = products.filter(p => p.status === status.id).length
+                        const count = (products || []).filter(p => p.status === status.id).length
                         return (
                           <button
                             key={status.id}
