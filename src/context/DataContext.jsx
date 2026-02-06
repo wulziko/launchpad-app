@@ -44,18 +44,8 @@ export function DataProvider({ children }) {
     }
   }, [isAuthenticated, user])
 
-  // Fallback polling if real-time doesn't work
-  useEffect(() => {
-    if (!isAuthenticated || !user) return
-
-    // Poll every 5 seconds as fallback
-    const pollInterval = setInterval(() => {
-      console.log('[DataContext] Polling for updates (fallback)')
-      fetchAllData()
-    }, 5000)
-
-    return () => clearInterval(pollInterval)
-  }, [isAuthenticated, user])
+  // Removed aggressive polling - real-time subscriptions handle updates
+  // If real-time fails, user can manually refresh or we can add a longer interval (e.g., 5 minutes)
 
   // Real-time subscriptions for live updates
   useEffect(() => {

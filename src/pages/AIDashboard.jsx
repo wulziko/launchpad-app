@@ -36,8 +36,8 @@ function AIDashboard() {
 
   useEffect(() => {
     fetchDashboard()
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchDashboard, 30000)
+    // Auto-refresh every 2 minutes (less aggressive)
+    const interval = setInterval(fetchDashboard, 120000)
     return () => clearInterval(interval)
   }, [])
 
