@@ -20,6 +20,7 @@ import {
   Search,
   Command,
   Sparkles,
+  Wrench,
 } from 'lucide-react'
 
 const navigation = [
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Assets', href: '/assets', icon: Image },
   { name: 'Converter', href: '/converter', icon: FileCode },
   { name: '🤖 AI Dashboard', href: '/ai-dashboard', icon: Sparkles },
+  { name: 'Skills', href: '/skills', icon: Wrench },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
