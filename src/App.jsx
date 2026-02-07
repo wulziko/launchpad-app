@@ -12,6 +12,7 @@ import Assets from './pages/Assets'
 import Settings from './pages/Settings'
 import Converter from './pages/Converter'
 import AIDashboard from './pages/AIDashboard'
+import Skills from './pages/Skills'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -50,6 +51,7 @@ function App() {
                     <Route path="/assets" element={<Assets />} />
                     <Route path="/converter" element={<Converter />} />
                     <Route path="/ai-dashboard" element={<AIDashboard />} />
+                    <Route path="/skills" element={<Skills />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </ErrorBoundary>
