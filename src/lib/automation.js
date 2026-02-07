@@ -533,9 +533,168 @@ export const getLandingPageStatus = async (productId) => {
   }
 }
 
+/**
+ * Trigger review generation
+ */
+export const triggerReviewGeneration = async (product) => {
+  try {
+    await updateProductAutomationStatus(product.id, {
+      review_status: 'processing',
+      review_started_at: new Date().toISOString(),
+      review_progress: 0,
+      review_message: 'Generating product reviews...'
+    })
+
+    const meta = product.metadata || {}
+    const payload = {
+      id: product.id,
+      user_id: product.user_id,
+      name: product.name,
+      description: product.description || '',
+      niche: product.niche || meta.niche || '',
+      language: meta.language || product.language || 'English',
+      country: meta.country || product.country || 'US',
+      product_image_url: meta.product_image_url || product.product_image_url || ''
+    }
+
+    const response = await fetchWithRetry(
+      '/api/trigger-reviews',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      },
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
+        onRetry: (attempt, max, delay) => {
+          console.log(`[Reviews] Retry ${attempt}/${max} in ${delay}ms...`)
+        }
+      }
+    )
+
+    return { success: true, message: 'Review generation started!' }
+  } catch (error) {
+    console.error('Failed to trigger review generation:', error)
+    await updateProductAutomationStatus(product.id, {
+      review_status: 'error',
+      review_message: error.message
+    })
+    throw error
+  }
+}
+
+/**
+ * Trigger UGC script generation
+ */
+export const triggerUGCGeneration = async (product) => {
+  try {
+    await updateProductAutomationStatus(product.id, {
+      ugc_status: 'processing',
+      ugc_started_at: new Date().toISOString(),
+      ugc_progress: 0,
+      ugc_message: 'Generating UGC video scripts...'
+    })
+
+    const meta = product.metadata || {}
+    const payload = {
+      id: product.id,
+      user_id: product.user_id,
+      name: product.name,
+      description: product.description || '',
+      niche: product.niche || meta.niche || '',
+      language: meta.language || product.language || 'English',
+      country: meta.country || product.country || 'US',
+      target_audience: product.targetAudience || meta.targetAudience || '',
+      product_image_url: meta.product_image_url || product.product_image_url || ''
+    }
+
+    const response = await fetchWithRetry(
+      '/api/trigger-ugc',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      },
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
+        onRetry: (attempt, max, delay) => {
+          console.log(`[UGC Scripts] Retry ${attempt}/${max} in ${delay}ms...`)
+        }
+      }
+    )
+
+    return { success: true, message: 'UGC script generation started!' }
+  } catch (error) {
+    console.error('Failed to trigger UGC generation:', error)
+    await updateProductAutomationStatus(product.id, {
+      ugc_status: 'error',
+      ugc_message: error.message
+    })
+    throw error
+  }
+}
+
+/**
+ * Trigger Shopify deployment
+ */
+export const triggerShopifyDeployment = async (product, shopifyStore = 'cellux') => {
+  try {
+    await updateProductAutomationStatus(product.id, {
+      shopify_status: 'processing',
+      shopify_started_at: new Date().toISOString(),
+      shopify_progress: 0,
+      shopify_message: `Deploying to Shopify (${shopifyStore})...`
+    })
+
+    const meta = product.metadata || {}
+    const payload = {
+      id: product.id,
+      user_id: product.user_id,
+      name: product.name,
+      description: product.description || '',
+      price: product.price || 0,
+      niche: product.niche || meta.niche || '',
+      shopify_store: shopifyStore, // 'cellux' or 'glow82'
+      product_image_url: meta.product_image_url || product.product_image_url || '',
+      landing_page_url: meta.generated_landing_page_url || '',
+      generated_banners: meta.generated_banners || []
+    }
+
+    const response = await fetchWithRetry(
+      '/api/trigger-shopify',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      },
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
+        onRetry: (attempt, max, delay) => {
+          console.log(`[Shopify Deploy] Retry ${attempt}/${max} in ${delay}ms...`)
+        }
+      }
+    )
+
+    return { success: true, message: 'Shopify deployment started!' }
+  } catch (error) {
+    console.error('Failed to trigger Shopify deployment:', error)
+    await updateProductAutomationStatus(product.id, {
+      shopify_status: 'error',
+      shopify_message: error.message
+    })
+    throw error
+  }
+}
+
 export default {
   triggerBannerGeneration,
   triggerLandingPageGeneration,
+  triggerReviewGeneration,
+  triggerUGCGeneration,
+  triggerShopifyDeployment,
   updateProductAutomationStatus,
   subscribeToAutomationUpdates,
   getAutomationStatus,

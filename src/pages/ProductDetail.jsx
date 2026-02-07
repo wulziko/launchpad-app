@@ -6,10 +6,17 @@ import { useData } from '../context/DataContext'
 import { PageLoading } from '../components/LoadingSpinner'
 import ErrorBoundary from '../components/ErrorBoundary'
 import ResearchPanel from '../components/ResearchPanel'
+import ReviewsPanel from '../components/ReviewsPanel'
+import UGCScriptsPanel from '../components/UGCScriptsPanel'
 import { triggerProductResearch } from '../lib/research'
 import AutomationProgress from '../components/AutomationProgress'
 import LandingPageProgress from '../components/LandingPageProgress'
-import { triggerLandingPageGeneration } from '../lib/automation'
+import { 
+  triggerLandingPageGeneration,
+  triggerReviewGeneration,
+  triggerUGCGeneration,
+  triggerShopifyDeployment
+} from '../lib/automation'
 import {
   ArrowLeft,
   Edit,
@@ -41,6 +48,9 @@ import {
   Maximize2,
   Plus,
   Loader2,
+  Video,
+  Store,
+  ShoppingBag,
 } from 'lucide-react'
 
 // Status timeline configuration
@@ -611,6 +621,9 @@ export default function ProductDetail() {
     { id: 'research', label: 'Research', icon: Sparkles },
     { id: 'banners', label: 'Banners', icon: Image, count: productBanners.length },
     { id: 'landing', label: 'Landing Page', icon: Globe },
+    { id: 'reviews', label: 'Reviews', icon: Users },
+    { id: 'ugc', label: 'UGC Scripts', icon: Video },
+    { id: 'shopify', label: 'Shopify', icon: Package },
     { id: 'activity', label: 'Activity', icon: Clock },
   ]
 
@@ -1228,6 +1241,164 @@ export default function ProductDetail() {
                     <p className="text-dark-500">No landing pages generated yet</p>
                     <p className="text-sm text-dark-600 mt-1">Click "Generate Landing Pages" to create them</p>
                   </div>
+                )}
+              </motion.div>
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <ErrorBoundary>
+              <ReviewsPanel
+                product={product}
+                onRegenerate={async () => {
+                  try {
+                    await triggerReviewGeneration(product)
+                  } catch (err) {
+                    alert(`Failed to generate reviews: ${err.message}`)
+                  }
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === 'ugc' && (
+            <ErrorBoundary>
+              <UGCScriptsPanel
+                product={product}
+                onRegenerate={async () => {
+                  try {
+                    await triggerUGCGeneration(product)
+                  } catch (err) {
+                    alert(`Failed to generate UGC scripts: ${err.message}`)
+                  }
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === 'shopify' && (
+            <div className="space-y-6">
+              {/* Shopify Deployment Panel */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                      <ShoppingBag className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Shopify Deployment</h3>
+                      <p className="text-xs text-dark-500">Deploy product to your Shopify store</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Cellux Store */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="p-4 bg-dark-800/50 rounded-xl border border-dark-700"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                        <Store className="w-6 h-6 text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">Cellux</h4>
+                        <p className="text-xs text-dark-500">shop.gocellux.com</p>
+                      </div>
+                    </div>
+                    <motion.button
+                      onClick={async () => {
+                        try {
+                          await triggerShopifyDeployment(product, 'cellux')
+                          alert('Deploying to Cellux store...')
+                        } catch (err) {
+                          alert(`Failed: ${err.message}`)
+                        }
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-full btn btn-primary"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Deploy to Cellux
+                    </motion.button>
+                  </motion.div>
+
+                  {/* Glow82 Store */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="p-4 bg-dark-800/50 rounded-xl border border-dark-700"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                        <Store className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">Glow82</h4>
+                        <p className="text-xs text-dark-500">glow82.com</p>
+                      </div>
+                    </div>
+                    <motion.button
+                      onClick={async () => {
+                        try {
+                          await triggerShopifyDeployment(product, 'glow82')
+                          alert('Deploying to Glow82 store...')
+                        } catch (err) {
+                          alert(`Failed: ${err.message}`)
+                        }
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-full btn btn-primary"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Deploy to Glow82
+                    </motion.button>
+                  </motion.div>
+                </div>
+
+                {/* Deployment Status */}
+                {product?.metadata?.shopify_status && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 p-4 bg-dark-800/30 rounded-xl"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        product.metadata.shopify_status === 'completed' ? 'bg-green-500' :
+                        product.metadata.shopify_status === 'processing' ? 'bg-yellow-500 animate-pulse' :
+                        product.metadata.shopify_status === 'error' ? 'bg-red-500' :
+                        'bg-dark-600'
+                      }`} />
+                      <span className="text-sm font-medium text-white">
+                        {product.metadata.shopify_status === 'completed' ? 'Deployment Complete' :
+                         product.metadata.shopify_status === 'processing' ? 'Deploying...' :
+                         product.metadata.shopify_status === 'error' ? 'Deployment Failed' :
+                         'Ready to Deploy'}
+                      </span>
+                    </div>
+                    {product.metadata.shopify_message && (
+                      <p className="text-sm text-dark-400">{product.metadata.shopify_message}</p>
+                    )}
+                    {product.metadata.shopify_product_url && (
+                      <motion.a
+                        href={product.metadata.shopify_product_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ x: 2 }}
+                        className="inline-flex items-center gap-1 mt-3 text-sm text-primary-400 hover:text-primary-300"
+                      >
+                        View on Shopify
+                        <ExternalLink className="w-3 h-3" />
+                      </motion.a>
+                    )}
+                  </motion.div>
                 )}
               </motion.div>
             </div>
