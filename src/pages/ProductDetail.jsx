@@ -941,16 +941,16 @@ export default function ProductDetail() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <p className="text-sm text-dark-500 mb-1">Country</p>
-                      <p className="text-white">{product?.metadata?.country || product?.country || '-'}</p>
+                      <p className="text-sm text-dark-500 mb-1">Target Market</p>
+                      <p className="text-white">{product?.target_market || product?.metadata?.target_market || product?.country || product?.metadata?.country || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Language</p>
-                      <p className="text-white">{product?.metadata?.language || product?.language || '-'}</p>
+                      <p className="text-white">{product?.language || product?.metadata?.language || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Gender</p>
-                      <p className="text-white">{product?.metadata?.gender || product?.gender || '-'}</p>
+                      <p className="text-white">{product?.gender || product?.metadata?.gender || '-'}</p>
                     </div>
                   </div>
                   <div>
