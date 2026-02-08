@@ -1,9 +1,13 @@
 /**
  * Vercel Serverless Function - Proxy to n8n Shopify deployment workflow
  * Triggers product deployment to Shopify store
+ * 
+ * NOTE: Uses API execution instead of webhooks (webhooks require UI activation)
  */
 
-const N8N_WEBHOOK_URL = 'https://n8n.srv1300789.hstgr.cloud/webhook/launchpad-shopify-deploy';
+const N8N_URL = 'https://n8n.srv1300789.hstgr.cloud';
+const N8N_API_KEY = process.env.N8N_API_KEY;
+const WORKFLOW_ID = 'ERsflpyBzGCZefpD'; // Shopify workflow
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -21,35 +25,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Forward the request to n8n
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    // Trigger workflow via API (works without webhook registration)
+    const response = await fetch(`${N8N_URL}/api/v1/workflows/${WORKFLOW_ID}/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-N8N-API-KEY': N8N_API_KEY,
       },
       body: JSON.stringify({
-        // Product identification
-        product_id: req.body.id,
-        user_id: req.body.user_id,
-        name: req.body.name,
-        product_name: req.body.name,
-        description: req.body.description || '',
-        price: req.body.price || 0,
-        
-        // Store selection
-        shopify_store: req.body.shopify_store, // 'cellux' or 'glow82'
-        
-        // Product data
-        niche: req.body.niche || 'General',
-        product_image_url: req.body.product_image_url || '',
-        landing_page_url: req.body.landing_page_url || '',
-        
-        // Generated assets
-        generated_banners: req.body.generated_banners || [],
-        
-        // Trigger metadata
-        triggered_at: new Date().toISOString(),
-        trigger_source: 'launchpad-app'
+        workflowData: {
+          // Simulate webhook body structure
+          body: {
+            productId: req.body.id,
+            userId: req.body.user_id,
+            productName: req.body.name,
+            productDescription: req.body.description || '',
+            price: req.body.price || 0,
+            shopifyStore: req.body.shopify_store,
+            niche: req.body.niche || 'General',
+            productImageUrl: req.body.product_image_url || '',
+            landingPageUrl: req.body.landing_page_url || '',
+            generatedBanners: req.body.generated_banners || [],
+            triggeredAt: new Date().toISOString(),
+            triggerSource: 'launchpad-app'
+          }
+        }
       }),
     });
 
