@@ -1,9 +1,13 @@
 /**
  * Vercel Serverless Function - Proxy to n8n UGC script generation workflow
  * Triggers AI UGC video script generation
+ * 
+ * NOTE: Uses API execution instead of webhooks (webhooks require UI activation)
  */
 
-const N8N_WEBHOOK_URL = 'https://n8n.srv1300789.hstgr.cloud/webhook/launchpad-ugc-scripts';
+const N8N_URL = 'https://n8n.srv1300789.hstgr.cloud';
+const N8N_API_KEY = process.env.N8N_API_KEY;
+const WORKFLOW_ID = 'fpvbLxk8Lx2WmyTQ'; // UGC workflow
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -21,32 +25,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Forward the request to n8n
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    // Trigger workflow via API (works without webhook registration)
+    const response = await fetch(`${N8N_URL}/api/v1/workflows/${WORKFLOW_ID}/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-N8N-API-KEY': N8N_API_KEY,
       },
       body: JSON.stringify({
-        // Product identification
-        product_id: req.body.id,
-        user_id: req.body.user_id,
-        name: req.body.name,
-        product_name: req.body.name,
-        description: req.body.description || '',
-        
-        // Localization
-        niche: req.body.niche || 'General',
-        country: req.body.country || 'US',
-        language: req.body.language || 'English',
-        target_audience: req.body.target_audience || '',
-        
-        // Product image for context
-        product_image_url: req.body.product_image_url || '',
-        
-        // Trigger metadata
-        triggered_at: new Date().toISOString(),
-        trigger_source: 'launchpad-app'
+        workflowData: {
+          // Simulate webhook body structure
+          body: {
+            productId: req.body.id,
+            userId: req.body.user_id,
+            productName: req.body.name,
+            productDescription: req.body.description || '',
+            niche: req.body.niche || 'General',
+            country: req.body.country || 'US',
+            language: req.body.language || 'English',
+            targetAudience: req.body.target_audience || '',
+            productImageUrl: req.body.product_image_url || '',
+            triggeredAt: new Date().toISOString(),
+            triggerSource: 'launchpad-app'
+          }
+        }
       }),
     });
 
