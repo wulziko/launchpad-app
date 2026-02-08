@@ -33,63 +33,54 @@ export default function UGCScriptsPanel({ product, onRegenerate }) {
     expert: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
   }
   
-  if (scripts.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="card text-center py-12"
-      >
-        <Video className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-        <h3 className="text-lg font-semibold text-white mb-2">No UGC Scripts Generated Yet</h3>
-        <p className="text-dark-400 mb-6">Generate UGC-style video scripts for social media ads</p>
-        <motion.button
-          onClick={handleRegenerate}
-          disabled={generating}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="btn btn-primary"
-        >
-          {generating ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Video className="w-4 h-4" />
-              Generate Scripts
-            </>
-          )}
-        </motion.button>
-      </motion.div>
-    )
-  }
-  
+  // FIX #1: Always show header with prominent action button
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Action Button - ALWAYS VISIBLE */}
       <div className="card">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-white mb-1">UGC Video Scripts</h3>
-            <p className="text-sm text-dark-400">{scripts.length} script variations generated</p>
+            <p className="text-sm text-dark-400">
+              {scripts.length === 0
+                ? 'Generate UGC-style video scripts for social media ads'
+                : `${scripts.length} script variations generated`}
+            </p>
           </div>
+          {/* FIX #1: Make generate button always prominent */}
           <motion.button
             onClick={handleRegenerate}
             disabled={generating}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
             whileTap={{ scale: 0.98 }}
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary"
           >
-            <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-            Regenerate
+            {generating ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4" />
+                {scripts.length === 0 ? 'Generate Scripts' : 'Regenerate Scripts'}
+              </>
+            )}
           </motion.button>
         </div>
+        
+        {/* Empty State Message (if no scripts) */}
+        {scripts.length === 0 && (
+          <div className="mt-4 text-center py-8 border-2 border-dashed border-dark-800 rounded-xl bg-dark-900/30">
+            <Video className="w-10 h-10 mx-auto mb-3 text-dark-600" />
+            <p className="text-dark-500 text-sm">No UGC scripts yet. Click "Generate Scripts" to create them.</p>
+          </div>
+        )}
       </div>
       
-      {/* Scripts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Scripts Grid - Only show if we have scripts */}
+      {scripts.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AnimatePresence>
           {scripts.map((script, index) => {
             const isExpanded = expandedScript === index
@@ -333,7 +324,8 @@ export default function UGCScriptsPanel({ product, onRegenerate }) {
             )
           })}
         </AnimatePresence>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

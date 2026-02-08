@@ -991,6 +991,7 @@ function NewProductModal({ onClose, onAdd }) {
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef(null)
+  const submitInProgressRef = useRef(false) // FIX #3: Prevent double submit
 
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0]
@@ -1022,11 +1023,18 @@ function NewProductModal({ onClose, onAdd }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    // FIX #3: Prevent double submit with ref
+    if (submitInProgressRef.current) {
+      console.log('[ProductForm] Submit already in progress, ignoring duplicate submission')
+      return
+    }
+    
     if (!formData.name.trim()) {
       setError('Product name is required')
       return
     }
     
+    submitInProgressRef.current = true
     setSubmitting(true)
     setError('')
     
@@ -1044,21 +1052,46 @@ function NewProductModal({ onClose, onAdd }) {
         setUploadingImage(false)
       }
       
-      await onAdd({
-        ...formData,
+      // FIX #2: Explicitly pass country, language, and gender to ensure they're saved
+      const productData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
+        market: formData.market, // Keep as-is
         niche: formData.niche.trim(),
+        targetAudience: formData.targetAudience.trim(),
         product_image_url: productImageUrl,
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        // FIX #2: Explicitly include dropdown values
+        country: formData.country,
+        language: formData.language,
+        gender: formData.gender,
+        // Include advanced fields
+        aliexpress_link: formData.aliexpress_link.trim(),
+        amazon_link: formData.amazon_link.trim(),
+        competitor_link_1: formData.competitor_link_1.trim(),
+        competitor_link_2: formData.competitor_link_2.trim(),
+      }
+      
+      // FIX #2: Debug log to verify values before submission
+      console.log('[ProductForm] Submitting product with data:', {
+        country: productData.country,
+        language: productData.language,
+        gender: productData.gender
       })
+      
+      await onAdd(productData)
       onClose()
     } catch (err) {
       console.error('Error adding product:', err)
       setError(err.message || 'Failed to add product. Please try again.')
       setUploadingImage(false)
+      submitInProgressRef.current = false // Reset on error
     } finally {
       setSubmitting(false)
+      // Keep ref set to true briefly to prevent rapid re-submissions
+      setTimeout(() => {
+        submitInProgressRef.current = false
+      }, 1000)
     }
   }
 

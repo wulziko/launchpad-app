@@ -157,6 +157,34 @@ export function DataProvider({ children }) {
     if (!user) throw new Error('Must be logged in')
     
     try {
+      // FIX #2: Log received data to verify values are passed correctly
+      console.log('[DataContext] addProduct received:', {
+        country: productData.country,
+        language: productData.language,
+        gender: productData.gender
+      })
+      
+      // FIX #2: Build metadata with explicit values (no fallbacks that could override user selection)
+      const metadata = {
+        targetAudience: productData.targetAudience || '',
+        tags: productData.tags || [],
+        language: productData.language || 'English',
+        country: productData.country || 'United States',
+        gender: productData.gender || 'All',
+        aliexpress_link: productData.aliexpress_link || '',
+        amazon_link: productData.amazon_link || '',
+        competitor_link_1: productData.competitor_link_1 || '',
+        competitor_link_2: productData.competitor_link_2 || '',
+        product_image_url: productData.product_image_url || '',
+      }
+      
+      // FIX #2: Log what's being sent to database
+      console.log('[DataContext] Creating product with metadata:', {
+        country: metadata.country,
+        language: metadata.language,
+        gender: metadata.gender
+      })
+      
       const newProduct = await db.products.create({
         user_id: user.id,
         name: productData.name,
@@ -164,22 +192,28 @@ export function DataProvider({ children }) {
         status: 'new',
         niche: productData.niche || '',
         target_market: productData.market || 'US',
-        metadata: {
-          targetAudience: productData.targetAudience || '',
-          tags: productData.tags || [],
-          language: productData.language || 'English',
-          country: productData.country || 'United States',
-          gender: productData.gender || 'All',
-          aliexpress_link: productData.aliexpress_link || '',
-          amazon_link: productData.amazon_link || '',
-          competitor_link_1: productData.competitor_link_1 || '',
-          competitor_link_2: productData.competitor_link_2 || '',
-          product_image_url: productData.product_image_url || '',
-        }
+        metadata
+      })
+      
+      // FIX #2: Log what was actually created
+      console.log('[DataContext] Product created with metadata:', {
+        id: newProduct.id,
+        country: newProduct.metadata?.country,
+        language: newProduct.metadata?.language,
+        gender: newProduct.metadata?.gender
       })
       
       // Transform to frontend format
       const formattedProduct = formatProduct(newProduct)
+      
+      // FIX #2: Log formatted product
+      console.log('[DataContext] Formatted product:', {
+        id: formattedProduct.id,
+        country: formattedProduct.country,
+        language: formattedProduct.language,
+        gender: formattedProduct.gender
+      })
+      
       setProducts(prev => [formattedProduct, ...prev])
       return formattedProduct
     } catch (err) {
