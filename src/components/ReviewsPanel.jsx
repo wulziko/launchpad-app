@@ -57,82 +57,77 @@ export default function ReviewsPanel({ product, onRegenerate }) {
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : 0
   
-  if (reviews.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="card text-center py-12"
-      >
-        <Star className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-        <h3 className="text-lg font-semibold text-white mb-2">No Reviews Generated Yet</h3>
-        <p className="text-dark-400 mb-6">Generate AI-powered product reviews to boost social proof</p>
-        <motion.button
-          onClick={handleRegenerate}
-          disabled={generating}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="btn btn-primary"
-        >
-          {generating ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Star className="w-4 h-4" />
-              Generate Reviews
-            </>
-          )}
-        </motion.button>
-      </motion.div>
-    )
-  }
-  
+  // FIX #1: Always show header with prominent action button
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Action Button - ALWAYS VISIBLE */}
       <div className="card">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-xl font-bold text-white mb-1">Product Reviews</h3>
-            <p className="text-sm text-dark-400">{reviews.length} reviews generated</p>
+            <p className="text-sm text-dark-400">
+              {reviews.length === 0 
+                ? 'Generate AI-powered reviews to boost social proof' 
+                : `${reviews.length} reviews generated`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <motion.button
-              onClick={handleExportCSV}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="btn btn-secondary btn-sm"
-            >
-              <Download className="w-4 h-4" />
-              CSV
-            </motion.button>
-            <motion.button
-              onClick={handleExportJSON}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="btn btn-secondary btn-sm"
-            >
-              <Download className="w-4 h-4" />
-              JSON
-            </motion.button>
+            {reviews.length > 0 && (
+              <>
+                <motion.button
+                  onClick={handleExportCSV}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  CSV
+                </motion.button>
+                <motion.button
+                  onClick={handleExportJSON}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  JSON
+                </motion.button>
+              </>
+            )}
+            {/* FIX #1: Make generate button always prominent */}
             <motion.button
               onClick={handleRegenerate}
               disabled={generating}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 10px 30px -10px rgba(236, 72, 153, 0.4)' }}
               whileTap={{ scale: 0.98 }}
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary"
             >
-              <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-              Regenerate
+              {generating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Star className="w-4 h-4" />
+                  {reviews.length === 0 ? 'Generate Reviews' : 'Regenerate Reviews'}
+                </>
+              )}
             </motion.button>
           </div>
         </div>
         
-        {/* Rating Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-dark-800/30 rounded-xl">
+        {/* Empty State Message (if no reviews) */}
+        {reviews.length === 0 && (
+          <div className="text-center py-8 border-2 border-dashed border-dark-800 rounded-xl bg-dark-900/30">
+            <Star className="w-10 h-10 mx-auto mb-3 text-dark-600" />
+            <p className="text-dark-500 text-sm">No reviews yet. Click "Generate Reviews" to create them.</p>
+          </div>
+        )}
+        
+        {/* Rating Summary - Only show if we have reviews */}
+        {reviews.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-dark-800/30 rounded-xl">
           <div className="text-center">
             <div className="text-4xl font-bold text-white mb-2">{avgRating}</div>
             <div className="flex items-center justify-center gap-1 mb-1">
@@ -163,10 +158,12 @@ export default function ReviewsPanel({ product, onRegenerate }) {
             ))}
           </div>
         </div>
+        )}
       </div>
       
-      {/* Reviews List */}
-      <div className="space-y-4">
+      {/* Reviews List - Only show if we have reviews */}
+      {reviews.length > 0 && (
+        <div className="space-y-4">
         <AnimatePresence>
           {reviews.map((review, index) => (
             <motion.div
@@ -209,7 +206,8 @@ export default function ReviewsPanel({ product, onRegenerate }) {
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
