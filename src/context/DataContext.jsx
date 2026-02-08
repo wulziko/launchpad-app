@@ -192,6 +192,15 @@ export function DataProvider({ children }) {
         status: 'new',
         niche: productData.niche || '',
         target_market: productData.market || 'US',
+        // FIX: Populate top-level columns (these exist in DB schema)
+        country: productData.country || 'United States',
+        language: productData.language || 'English',
+        gender: productData.gender || 'All',
+        amazon_link: productData.amazon_link || '',
+        product_image_url: productData.product_image_url || '',
+        competitor_link_1: productData.competitor_link_1 || '',
+        competitor_link_2: productData.competitor_link_2 || '',
+        // Keep in metadata too for backwards compatibility
         metadata
       })
       
@@ -236,7 +245,16 @@ export function DataProvider({ children }) {
       if (updates.market) dbUpdates.target_market = updates.market
       if (updates.notes !== undefined) dbUpdates.notes = updates.notes
       
-      // Update metadata fields
+      // FIX: Update top-level columns directly (these exist in DB schema)
+      if (updates.country !== undefined) dbUpdates.country = updates.country
+      if (updates.language !== undefined) dbUpdates.language = updates.language
+      if (updates.gender !== undefined) dbUpdates.gender = updates.gender
+      if (updates.amazon_link !== undefined) dbUpdates.amazon_link = updates.amazon_link
+      if (updates.product_image_url !== undefined) dbUpdates.product_image_url = updates.product_image_url
+      if (updates.competitor_link_1 !== undefined) dbUpdates.competitor_link_1 = updates.competitor_link_1
+      if (updates.competitor_link_2 !== undefined) dbUpdates.competitor_link_2 = updates.competitor_link_2
+      
+      // Update metadata fields (keep for backwards compatibility)
       const metadataUpdates = {}
       if (updates.language !== undefined) metadataUpdates.language = updates.language
       if (updates.country !== undefined) metadataUpdates.country = updates.country
@@ -249,7 +267,7 @@ export function DataProvider({ children }) {
       if (updates.product_image_url !== undefined) metadataUpdates.product_image_url = updates.product_image_url
       if (updates.tags !== undefined) metadataUpdates.tags = updates.tags
       
-      // Merge with existing metadata if there are updates
+      // FIX: ALWAYS merge metadata, NEVER replace (prevents data loss from n8n workflows)
       if (Object.keys(metadataUpdates).length > 0) {
         dbUpdates.metadata = { ...currentMetadata, ...metadataUpdates }
       }
@@ -292,6 +310,15 @@ export function DataProvider({ children }) {
         status: 'new', // Reset status for duplicated product
         niche: productToDuplicate.niche || '',
         target_market: productToDuplicate.market || 'US',
+        // FIX: Populate top-level columns
+        country: productToDuplicate.country || 'United States',
+        language: productToDuplicate.language || 'English',
+        gender: productToDuplicate.gender || 'All',
+        amazon_link: productToDuplicate.amazon_link || '',
+        product_image_url: productToDuplicate.product_image_url || '',
+        competitor_link_1: productToDuplicate.competitor_link_1 || '',
+        competitor_link_2: productToDuplicate.competitor_link_2 || '',
+        // Keep in metadata too
         metadata: {
           targetAudience: productToDuplicate.targetAudience || '',
           tags: productToDuplicate.tags || [],
@@ -440,10 +467,8 @@ export function DataProvider({ children }) {
 
   // Format database product to frontend format
   const formatProduct = (dbProduct) => {
-    // Debug logging to track product_image_url
-    if (dbProduct.id && !dbProduct.metadata?.product_image_url) {
-      console.warn('[formatProduct] Missing product_image_url for product:', dbProduct.id, 'metadata:', dbProduct.metadata)
-    }
+    // FIX: Read from top-level columns first, fallback to metadata
+    // This ensures data persists even if n8n workflows overwrite metadata
     
     return {
       id: dbProduct.id,
@@ -455,14 +480,16 @@ export function DataProvider({ children }) {
       notes: dbProduct.notes || '',
       tags: dbProduct.metadata?.tags || [],
       targetAudience: dbProduct.metadata?.targetAudience || '',
-      language: dbProduct.metadata?.language || 'English',
-      country: dbProduct.metadata?.country || 'United States',
-      gender: dbProduct.metadata?.gender || 'All',
+      // FIX: Prioritize top-level columns over metadata
+      language: dbProduct.language || dbProduct.metadata?.language || 'English',
+      country: dbProduct.country || dbProduct.metadata?.country || 'United States',
+      gender: dbProduct.gender || dbProduct.metadata?.gender || 'All',
+      amazon_link: dbProduct.amazon_link || dbProduct.metadata?.amazon_link || '',
+      product_image_url: dbProduct.product_image_url || dbProduct.metadata?.product_image_url || '',
+      competitor_link_1: dbProduct.competitor_link_1 || dbProduct.metadata?.competitor_link_1 || '',
+      competitor_link_2: dbProduct.competitor_link_2 || dbProduct.metadata?.competitor_link_2 || '',
+      // Keep aliexpress_link from metadata only (no top-level column)
       aliexpress_link: dbProduct.metadata?.aliexpress_link || '',
-      amazon_link: dbProduct.metadata?.amazon_link || '',
-      competitor_link_1: dbProduct.metadata?.competitor_link_1 || '',
-      competitor_link_2: dbProduct.metadata?.competitor_link_2 || '',
-      product_image_url: dbProduct.metadata?.product_image_url || dbProduct.product_image_url || '', // Try metadata first, then top-level column
       createdAt: dbProduct.created_at,
       updatedAt: dbProduct.updated_at,
     
