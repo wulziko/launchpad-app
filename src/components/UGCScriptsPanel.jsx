@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Video, RefreshCw, Copy, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Video, RefreshCw, Copy, CheckCircle2, ChevronDown, ChevronUp, Play, Download, ExternalLink } from 'lucide-react'
 
 export default function UGCScriptsPanel({ product, onRegenerate }) {
   const [copied, setCopied] = useState(null)
@@ -131,6 +131,69 @@ export default function UGCScriptsPanel({ product, onRegenerate }) {
                     )}
                   </motion.button>
                 </div>
+                
+                {/* Video Player (if video available) */}
+                {script.video_url && (
+                  <div className="mb-4">
+                    <div className="relative aspect-video bg-dark-900 rounded-lg overflow-hidden group/video">
+                      <video
+                        src={script.video_url}
+                        controls
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                      <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover/video:opacity-100 transition-opacity">
+                        <motion.a
+                          href={script.video_url}
+                          download
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-2 bg-dark-900/90 backdrop-blur-sm rounded-lg text-white hover:bg-dark-800"
+                          title="Download video"
+                        >
+                          <Download className="w-4 h-4" />
+                        </motion.a>
+                        <motion.a
+                          href={script.video_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-2 bg-dark-900/90 backdrop-blur-sm rounded-lg text-white hover:bg-dark-800"
+                          title="Open in new tab"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </motion.a>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-dark-500">
+                      <span className={`px-2 py-1 rounded ${
+                        script.video_status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                        script.video_status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
+                        'bg-blue-500/10 text-blue-400'
+                      }`}>
+                        {script.video_status === 'completed' ? '✓ Video Ready' :
+                         script.video_status === 'processing' ? '⏳ Processing...' :
+                         '📹 Video Available'}
+                      </span>
+                      {script.created_at && (
+                        <span>Generated {new Date(script.created_at).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Video Status (if processing) */}
+                {!script.video_url && script.video_status === 'processing' && (
+                  <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-yellow-400">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Video is being generated... This may take 2-5 minutes</span>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Script Sections */}
                 <div className="space-y-3">
