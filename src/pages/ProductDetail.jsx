@@ -942,15 +942,15 @@ export default function ProductDetail() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Country</p>
-                      <p className="text-white">{product?.country || product?.metadata?.country || '-'}</p>
+                      <p className="text-white">{product?.metadata?.country || product?.country || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Language</p>
-                      <p className="text-white">{product?.language || product?.metadata?.language || '-'}</p>
+                      <p className="text-white">{product?.metadata?.language || product?.language || '-'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-dark-500 mb-1">Gender</p>
-                      <p className="text-white">{product?.gender || product?.metadata?.gender || '-'}</p>
+                      <p className="text-white">{product?.metadata?.gender || product?.gender || '-'}</p>
                     </div>
                   </div>
                   <div>
