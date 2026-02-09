@@ -14,16 +14,26 @@ const MANAGE_EXECUTION_URL = '/api/manage-execution'
 /**
  * Trigger n8n workflow for a product
  * This is called when product status changes to trigger automation
+ * PHASE 1: Uses automation_runs table (not products.metadata)
  */
 export const triggerBannerGeneration = async (product) => {
   try {
-    // First, update product status to show it's processing
-    await updateProductAutomationStatus(product.id, {
-      automation_status: 'processing',
-      automation_started_at: new Date().toISOString(),
-      automation_progress: 0,
-      automation_message: 'Starting banner generation...'
-    })
+    // Create or update automation run in automation_runs table
+    const { error: upsertError } = await supabase
+      .from('automation_runs')
+      .upsert({
+        product_id: product.id,
+        user_id: product.user_id,
+        automation_type: 'banner',
+        status: 'processing',
+        progress: 0,
+        message: 'Starting banner generation...',
+        started_at: new Date().toISOString()
+      }, {
+        onConflict: 'product_id,automation_type'
+      })
+    
+    if (upsertError) throw upsertError
 
     // Prepare payload for n8n webhook
     // IMPORTANT: metadata fields take priority since that's where the real data is stored
@@ -92,19 +102,46 @@ export const triggerBannerGeneration = async (product) => {
   } catch (error) {
     console.error('Failed to trigger banner generation:', error)
     
-    // Update status to error
-    await updateProductAutomationStatus(product.id, {
-      automation_status: 'error',
-      automation_message: error.message
-    })
+    // Update automation_runs status to error (Phase 1)
+    await supabase
+      .from('automation_runs')
+      .update({
+        status: 'error',
+        message: error.message
+      })
+      .eq('product_id', product.id)
+      .eq('automation_type', 'banner')
     
     throw error
   }
 }
 
 /**
- * Update product automation status
+ * Update banner automation status (Phase 1: Uses automation_runs table)
+ */
+export const updateBannerAutomationStatus = async (productId, updates) => {
+  if (!supabase) throw new Error('Supabase not configured')
+  
+  const { data, error } = await supabase
+    .from('automation_runs')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('product_id', productId)
+    .eq('automation_type', 'banner')
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
+}
+
+/**
+ * Update product automation status (DEPRECATED for banners in Phase 1)
  * This is called by both the frontend and n8n (via Supabase REST API)
+ * ⚠️ PHASE 1: Only used by landing_page, review, ugc, shopify automations
+ * ⚠️ Will be removed in Phase 2/3 when all automations use automation_runs
  */
 export const updateProductAutomationStatus = async (productId, updates) => {
   if (!supabase) throw new Error('Supabase not configured')
@@ -136,7 +173,7 @@ export const updateProductAutomationStatus = async (productId, updates) => {
 
 /**
  * Subscribe to real-time automation updates for a product
- * Watches both products (for progress) and assets (for new banners)
+ * PHASE 1: Watches automation_runs (for banner progress) and assets (for new banners)
  * Returns an unsubscribe function
  */
 export const subscribeToAutomationUpdates = (productId, callback) => {
@@ -172,30 +209,29 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
   }
 
   const channel = supabase
-    .channel(`product-automation-${productId}`)
-    // Watch product updates (for progress)
+    .channel(`automation-banner-${productId}`)
+    // PHASE 1: Watch automation_runs for banner progress (not products.metadata)
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*', // INSERT, UPDATE
         schema: 'public',
-        table: 'products',
-        filter: `id=eq.${productId}`
+        table: 'automation_runs',
+        filter: `product_id=eq.${productId}&automation_type=eq.banner`
       },
       async (payload) => {
-        const metadata = payload.new.metadata || {}
+        const run = payload.new
         
         // Fetch latest banners from assets
         const banners = await fetchBanners()
         
         latestState = {
-          status: metadata.automation_status || latestState.status,
-          progress: metadata.automation_progress || latestState.progress,
-          message: metadata.automation_message || latestState.message,
-          startedAt: metadata.automation_started_at,
-          completedAt: metadata.automation_completed_at,
+          status: run.status || latestState.status,
+          progress: run.progress || latestState.progress,
+          message: run.message || latestState.message,
+          startedAt: run.started_at,
+          completedAt: run.completed_at,
           banners: banners,
-          landingPageUrl: metadata.generated_landing_page_url,
         }
         callback(latestState)
       }
@@ -228,18 +264,19 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
 
 /**
  * Get automation status for a product
- * Fetches both metadata (for progress) and assets (for generated banners)
+ * PHASE 1: Fetches from automation_runs (for banner progress) and assets (for generated banners)
  */
 export const getAutomationStatus = async (productId) => {
   if (!supabase) return null
   
-  // Fetch product metadata and assets in parallel
-  const [productResult, assetsResult] = await Promise.all([
+  // Fetch automation_runs and assets in parallel
+  const [runResult, assetsResult] = await Promise.all([
     supabase
-      .from('products')
-      .select('metadata')
-      .eq('id', productId)
-      .single(),
+      .from('automation_runs')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('automation_type', 'banner')
+      .maybeSingle(), // Returns null if no record, doesn't throw error
     supabase
       .from('assets')
       .select('*')
@@ -248,9 +285,11 @@ export const getAutomationStatus = async (productId) => {
       .order('created_at', { ascending: true })
   ])
 
-  if (productResult.error) throw productResult.error
+  if (runResult.error && runResult.error.code !== 'PGRST116') {
+    throw runResult.error
+  }
   
-  const metadata = productResult.data?.metadata || {}
+  const run = runResult.data || {}
   const assets = assetsResult.data || []
   
   // Map assets to banner format for the UI
@@ -263,13 +302,12 @@ export const getAutomationStatus = async (productId) => {
   }))
   
   return {
-    status: metadata.automation_status || 'idle',
-    progress: metadata.automation_progress || 0,
-    message: metadata.automation_message || '',
-    startedAt: metadata.automation_started_at,
-    completedAt: metadata.automation_completed_at,
+    status: run.status || 'idle',
+    progress: run.progress || 0,
+    message: run.message || '',
+    startedAt: run.started_at,
+    completedAt: run.completed_at,
     banners: banners, // From assets table (source of truth)
-    landingPageUrl: metadata.generated_landing_page_url,
   }
 }
 
@@ -314,18 +352,19 @@ export const completeAutomation = async (productId, results = {}) => {
 
 /**
  * Stop a running automation
- * Calls n8n API to stop the execution and updates product status
+ * PHASE 1: Updates automation_runs for banners
  */
 export const stopAutomation = async (productId, executionId = null) => {
   try {
-    // Get execution ID from metadata if not provided
+    // Get execution ID from automation_runs if not provided (Phase 1)
     if (!executionId && supabase) {
       const { data } = await supabase
-        .from('products')
-        .select('metadata')
-        .eq('id', productId)
+        .from('automation_runs')
+        .select('n8n_execution_id')
+        .eq('product_id', productId)
+        .eq('automation_type', 'banner')
         .single()
-      executionId = data?.metadata?.n8n_execution_id
+      executionId = data?.n8n_execution_id
     }
 
     // Try to stop n8n execution if we have an ID
@@ -345,12 +384,16 @@ export const stopAutomation = async (productId, executionId = null) => {
       }
     }
 
-    // Update product status to stopped
-    await updateProductAutomationStatus(productId, {
-      automation_status: 'stopped',
-      automation_message: 'Generation stopped by user',
-      automation_stopped_at: new Date().toISOString()
-    })
+    // Update automation_runs status to stopped (Phase 1)
+    await supabase
+      .from('automation_runs')
+      .update({
+        status: 'stopped',
+        message: 'Generation stopped by user',
+        stopped_at: new Date().toISOString()
+      })
+      .eq('product_id', productId)
+      .eq('automation_type', 'banner')
 
     return { success: true, message: 'Automation stopped' }
   } catch (error) {
@@ -361,29 +404,31 @@ export const stopAutomation = async (productId, executionId = null) => {
 
 /**
  * Resume a stopped automation
- * Retriggers the workflow from where it left off (or from start if no checkpoint)
+ * PHASE 1: Uses automation_runs for banners
  */
 export const resumeAutomation = async (product) => {
   try {
-    // Get current status to check for checkpoint
+    // Get current status from automation_runs (Phase 1)
     const { data } = await supabase
-      .from('products')
-      .select('metadata')
-      .eq('id', product.id)
+      .from('automation_runs')
+      .select('*')
+      .eq('product_id', product.id)
+      .eq('automation_type', 'banner')
       .single()
 
-    const metadata = data?.metadata || {}
-    const lastProgress = metadata.automation_progress || 0
-    const lastStage = metadata.automation_last_stage || 'start'
+    const lastProgress = data?.progress || 0
 
     // Update status to show resuming
-    await updateProductAutomationStatus(product.id, {
-      automation_status: 'processing',
-      automation_message: lastProgress > 0 
-        ? `Resuming from ${lastProgress}%...`
-        : 'Resuming generation...',
-      automation_resumed_at: new Date().toISOString()
-    })
+    await supabase
+      .from('automation_runs')
+      .update({
+        status: 'processing',
+        message: lastProgress > 0 
+          ? `Resuming from ${lastProgress}%...`
+          : 'Resuming generation...'
+      })
+      .eq('product_id', product.id)
+      .eq('automation_type', 'banner')
 
     // Call resume endpoint
     const response = await fetch(MANAGE_EXECUTION_URL, {
@@ -408,11 +453,15 @@ export const resumeAutomation = async (product) => {
   } catch (error) {
     console.error('Failed to resume automation:', error)
     
-    // Update status to error
-    await updateProductAutomationStatus(product.id, {
-      automation_status: 'error',
-      automation_message: `Resume failed: ${error.message}`
-    })
+    // Update automation_runs status to error (Phase 1)
+    await supabase
+      .from('automation_runs')
+      .update({
+        status: 'error',
+        message: `Resume failed: ${error.message}`
+      })
+      .eq('product_id', product.id)
+      .eq('automation_type', 'banner')
     
     throw error
   }
@@ -695,7 +744,8 @@ export default {
   triggerReviewGeneration,
   triggerUGCGeneration,
   triggerShopifyDeployment,
-  updateProductAutomationStatus,
+  updateBannerAutomationStatus, // Phase 1: New function for banners
+  updateProductAutomationStatus, // Deprecated for banners, kept for other automations
   subscribeToAutomationUpdates,
   getAutomationStatus,
   getLandingPageStatus,
