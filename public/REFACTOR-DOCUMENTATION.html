@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaunchPad Automation Refactor - Complete Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            color: #333;
+            background: #f9f9f9;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1e40af;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+        h3 {
+            color: #1e3a8a;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        pre code {
+            background: none;
+            color: #f9fafb;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 15px;
+            border-left: 4px solid #f59e0b;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d1fae5;
+            border-left-color: #10b981;
+        }
+        .warning {
+            background: #fee2e2;
+            border-left-color: #ef4444;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+        .toc {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 30px 0;
+        }
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .toc a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 LaunchPad Automation Refactor</h1>
+        <p><strong>Complete Documentation</strong></p>
+        <p>Date: February 9, 2026 | Branch: <code>refactor-automation-isolation</code></p>
+        
+        <div class="toc">
+            <h3>📋 Table of Contents</h3>
+            <ul>
+                <li><a href="#executive-summary">1. Executive Summary</a></li>
+                <li><a href="#problem">2. The Problem</a></li>
+                <li><a href="#solution">3. The Solution</a></li>
+                <li><a href="#phased-implementation">4. Phased Implementation</a></li>
+                <li><a href="#database-changes">5. Database Changes</a></li>
+                <li><a href="#code-changes">6. Code Changes</a></li>
+                <li><a href="#n8n-changes">7. n8n Workflow Changes</a></li>
+                <li><a href="#testing">8. Testing Strategy</a></li>
+                <li><a href="#rollback">9. Rollback Plan</a></li>
+                <li><a href="#questions">10. Questions Answered</a></li>
+                <li><a href="#standards">11. Automation Standards</a></li>
+            </ul>
+        </div>
+
+        <h2 id="executive-summary">1. Executive Summary</h2>
+        
+        <div class="highlight success">
+            <strong>✅ Root Cause Identified:</strong> All automations (banners, landing pages, reviews, UGC, Shopify) write to the SAME <code>products.metadata</code> JSON field, causing race conditions and data loss when multiple automations run.
+        </div>
+
+        <div class="section">
+            <h3>The Fix</h3>
+            <p>Create a separate <code>automation_runs</code> table where each automation gets its own database row:</p>
+            <pre><code>automation_runs table:
+┌────────────┬─────────────────┬──────────┬──────────┐
+│ product_id │ automation_type │ status   │ progress │
+├────────────┼─────────────────┼──────────┼──────────┤
+│ Product A  │ banner          │ proc     │ 50%      │
+│ Product A  │ landing_page    │ proc     │ 30%      │
+│ Product A  │ review          │ proc     │ 70%      │
+└────────────┴─────────────────┴──────────┴──────────┘</code></pre>
+        </div>
+
+        <div class="section">
+            <h3>Benefits</h3>
+            <ul>
+                <li>✅ No more race conditions</li>
+                <li>✅ Can run all 5 automations simultaneously</li>
+                <li>✅ True isolation per automation type</li>
+                <li>✅ Clean, queryable data</li>
+                <li>✅ Schema-enforced validation</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Safety Guarantees</h3>
+            <ul>
+                <li>✅ Only 6 test products in database</li>
+                <li>✅ Database backed up (6 products, 50 assets)</li>
+                <li>✅ Working on branch (not main)</li>
+                <li>✅ Can rollback in 5 minutes</li>
+                <li>✅ Stop gates between phases</li>
+            </ul>
+        </div>
+
+        <h2 id="problem">2. The Problem</h2>
+        
+        <div class="section">
+            <h3>Current Architecture (Broken)</h3>
+            <p>All automations share a single <code>products.metadata</code> JSONB field:</p>
+            <pre><code>products.metadata = {
+  // Banner automation
+  automation_status: 'processing',
+  automation_progress: 50,
+  automation_message: 'Generating banner 5/10...',
+  
+  // Landing page automation  
+  landing_page_status: 'processing',
+  landing_page_progress: 30,
+  
+  // Reviews automation
+  review_status: 'idle',
+  
+  // ALL IN ONE OBJECT - NO ISOLATION!
+}</code></pre>
+        </div>
+
+        <div class="highlight warning">
+            <strong>⚠️ Race Condition Example:</strong>
+            <ol>
+                <li>User clicks "Generate Banners" → writes <code>automation_status: 'processing'</code></li>
+                <li>User clicks "Generate Landing Page" → reads metadata, writes <code>landing_page_status: 'processing'</code></li>
+                <li><strong>OVERWRITES</strong> banner automation state!</li>
+                <li>n8n banner workflow writes progress → <strong>OVERWRITES</strong> landing page state!</li>
+                <li>Result: Both progress bars stuck, data loss</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h3>Why This Happens</h3>
+            <table>
+                <tr>
+                    <th>Issue</th>
+                    <th>Impact</th>
+                </tr>
+                <tr>
+                    <td>No row-level locking</td>
+                    <td>Multiple processes can overwrite each other</td>
+                </tr>
+                <tr>
+                    <td>Full object replacement</td>
+                    <td>JSONB PATCH replaces entire metadata field</td>
+                </tr>
+                <tr>
+                    <td>No merge strategy</td>
+                    <td>n8n workflows don't merge, they overwrite</td>
+                </tr>
+                <tr>
+                    <td>No conflict resolution</td>
+                    <td>No mechanism to detect or resolve collisions</td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 id="solution">3. The Solution</h2>
+        
+        <div class="section">
+            <h3>New Architecture (Safe)</h3>
+            <p>Create <code>automation_runs</code> table with separate rows per automation:</p>
+            <pre><code>CREATE TABLE automation_runs (
+  id UUID PRIMARY KEY,
+  product_id UUID REFERENCES products,
+  user_id UUID REFERENCES auth.users,
+  automation_type TEXT,  -- 'banner', 'landing_page', etc.
+  status TEXT,           -- 'idle', 'processing', 'completed', 'error'
+  progress INTEGER,      -- 0-100
+  message TEXT,
+  n8n_execution_id TEXT,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  
+  UNIQUE(product_id, automation_type)  -- One run per type per product
+);</code></pre>
+        </div>
+
+        <div class="section">
+            <h3>Why This Works</h3>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Benefit</th>
+                </tr>
+                <tr>
+                    <td>Separate rows</td>
+                    <td>Each automation has isolated state</td>
+                </tr>
+                <tr>
+                    <td>UNIQUE constraint</td>
+                    <td>Prevents duplicate runs</td>
+                </tr>
+                <tr>
+                    <td>Row-level locking</td>
+                    <td>Atomic updates, no race conditions</td>
+                </tr>
+                <tr>
+                    <td>ENUMs</td>
+                    <td>Schema validation, prevents typos</td>
+                </tr>
+                <tr>
+                    <td>Indexes</td>
+                    <td>Fast queries on product_id + automation_type</td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 id="phased-implementation">4. Phased Implementation</h2>
+        
+        <div class="section">
+            <h3>Phase 1: Banners Only (2-3 hours)</h3>
+            <ul>
+                <li>✅ Create <code>automation_runs</code> table</li>
+                <li>✅ Migrate ONLY banner generation to new table</li>
+                <li>⏸️ Keep other automations using old metadata system</li>
+                <li>✅ Test banner generation extensively</li>
+                <li>🛑 <strong>STOP GATE:</strong> Get approval before Phase 2</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Phase 2: Landing Pages (1-2 hours)</h3>
+            <ul>
+                <li>✅ Migrate landing page generation to new table</li>
+                <li>✅ Test banners + landing pages simultaneously</li>
+                <li>✅ Verify no conflicts</li>
+                <li>🛑 <strong>STOP GATE:</strong> Get approval before Phase 3</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Phase 3: Remaining Automations (2-3 hours)</h3>
+            <ul>
+                <li>✅ Migrate reviews, UGC, Shopify to new table</li>
+                <li>✅ Test all 5 automations simultaneously</li>
+                <li>✅ Remove deprecated <code>updateProductAutomationStatus</code> function</li>
+                <li>✅ Final regression testing</li>
+            </ul>
+        </div>
+
+        <div class="highlight">
+            <strong>Total Time:</strong> 5-8 hours (can split across multiple days)
+        </div>
+
+        <h2 id="database-changes">5. Database Changes</h2>
+        
+        <div class="section">
+            <h3>Create automation_runs Table</h3>
+            <p><strong>File:</strong> <code>supabase/migrations/20260209205500_create_automation_runs.sql</code></p>
+            <pre><code>-- Create ENUMs
+CREATE TYPE automation_type AS ENUM (
+  'banner', 'landing_page', 'review', 'ugc', 'shopify'
+);
+
+CREATE TYPE automation_status AS ENUM (
+  'idle', 'processing', 'completed', 'error', 'stopped'
+);
+
+-- Create table
+CREATE TABLE automation_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  automation_type automation_type NOT NULL,
+  status automation_status NOT NULL DEFAULT 'idle',
+  progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  message TEXT,
+  n8n_execution_id TEXT,
+  started_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  
+  CONSTRAINT unique_product_automation UNIQUE(product_id, automation_type)
+);
+
+-- Indexes
+CREATE INDEX idx_automation_runs_product_id ON automation_runs(product_id);
+CREATE INDEX idx_automation_runs_status ON automation_runs(status);
+CREATE INDEX idx_automation_runs_type ON automation_runs(automation_type);
+
+-- Helper function for atomic updates
+CREATE OR REPLACE FUNCTION update_automation_status(
+  p_product_id UUID,
+  p_automation_type automation_type,
+  p_status automation_status DEFAULT NULL,
+  p_progress INTEGER DEFAULT NULL,
+  p_message TEXT DEFAULT NULL
+) RETURNS automation_runs AS $$
+DECLARE
+  v_run automation_runs;
+BEGIN
+  UPDATE automation_runs SET
+    status = COALESCE(p_status, status),
+    progress = COALESCE(p_progress, progress),
+    message = COALESCE(p_message, message),
+    updated_at = NOW()
+  WHERE product_id = p_product_id
+    AND automation_type = p_automation_type
+  RETURNING * INTO v_run;
+  
+  RETURN v_run;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;</code></pre>
+        </div>
+
+        <h2 id="code-changes">6. Code Changes</h2>
+        
+        <div class="section">
+            <h3>Before (Current - Broken)</h3>
+            <pre><code>// automation.js
+export const triggerBannerGeneration = async (product) => {
+  // Write to products.metadata
+  await updateProductAutomationStatus(product.id, {
+    automation_status: 'processing',
+    automation_progress: 0
+  })
+  
+  // Call n8n...
+}
+
+// PROBLEM: All automations share same metadata object!</code></pre>
+        </div>
+
+        <div class="section">
+            <h3>After (New - Safe)</h3>
+            <pre><code>// automation.js
+export const triggerBannerGeneration = async (product) => {
+  // Write to automation_runs table
+  await supabase
+    .from('automation_runs')
+    .upsert({
+      product_id: product.id,
+      user_id: product.user_id,
+      automation_type: 'banner',  // Isolated!
+      status: 'processing',
+      progress: 0
+    }, {
+      onConflict: 'product_id,automation_type'
+    })
+  
+  // Call n8n...
+}</code></pre>
+        </div>
+
+        <h2 id="n8n-changes">7. n8n Workflow Changes</h2>
+        
+        <div class="section">
+            <h3>Before (Broken)</h3>
+            <pre><code>HTTP Node: PATCH to products
+URL: /rest/v1/products?id=eq.{{product_id}}
+Body: {
+  "metadata": {
+    "automation_status": "processing",
+    "automation_progress": 50
+  }
+}</code></pre>
+        </div>
+
+        <div class="section">
+            <h3>After (Safe)</h3>
+            <pre><code>HTTP Node: Call Postgres RPC
+URL: /rest/v1/rpc/update_automation_status
+Body: {
+  "p_product_id": "{{product_id}}",
+  "p_automation_type": "banner",
+  "p_status": "processing",
+  "p_progress": 50,
+  "p_message": "Generating banner 5/10..."
+}</code></pre>
+        </div>
+
+        <div class="section">
+            <h3>Changes Required Per Workflow</h3>
+            <ul>
+                <li>Update 5-6 HTTP nodes (progress updates)</li>
+                <li>Change URL from <code>/products</code> to <code>/rpc/update_automation_status</code></li>
+                <li>Change body format to include <code>p_automation_type</code></li>
+                <li><strong>Time:</strong> ~10 minutes per workflow</li>
+            </ul>
+        </div>
+
+        <h2 id="testing">8. Testing Strategy</h2>
+        
+        <div class="section">
+            <h3>Phase 1 Test Suite</h3>
+            <table>
+                <tr>
+                    <th>Test</th>
+                    <th>Pass Criteria</th>
+                </tr>
+                <tr>
+                    <td>1. Banner generation alone</td>
+                    <td>✅ Progress reaches 100%, banners saved to assets</td>
+                </tr>
+                <tr>
+                    <td>2. Verify metadata NOT used</td>
+                    <td>✅ products.metadata is empty (no automation_status)</td>
+                </tr>
+                <tr>
+                    <td>3. Simultaneous (different products)</td>
+                    <td>✅ Both products complete without conflict</td>
+                </tr>
+                <tr>
+                    <td>4. Stop/Resume</td>
+                    <td>✅ Can stop and resume from checkpoint</td>
+                </tr>
+                <tr>
+                    <td>5. Old automations still work</td>
+                    <td>✅ Landing page generation still works (uses old system)</td>
+                </tr>
+            </table>
+            <p><strong>All 5 tests MUST pass before proceeding to Phase 2.</strong></p>
+        </div>
+
+        <h2 id="rollback">9. Rollback Plan</h2>
+        
+        <div class="highlight warning">
+            <strong>⚠️ When to Rollback:</strong>
+            <ul>
+                <li>❌ Banner generation completely broken</li>
+                <li>❌ Can't fix within 1 hour</li>
+                <li>❌ n8n workflows failing consistently</li>
+                <li>❌ Data corruption detected</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Rollback Steps (5 minutes)</h3>
+            <ol>
+                <li><strong>Stop all automations</strong> (n8n UI)</li>
+                <li><strong>Run rollback SQL:</strong>
+                    <pre><code>psql -f supabase/migrations/ROLLBACK-automation-runs.sql</code></pre>
+                    This restores metadata and drops automation_runs table
+                </li>
+                <li><strong>Switch git branch:</strong>
+                    <pre><code>git checkout main
+git push origin main -f</code></pre>
+                </li>
+                <li><strong>Verify:</strong>
+                    <ul>
+                        <li>✅ Banner generation works (old system)</li>
+                        <li>✅ No errors in console</li>
+                        <li>✅ Vercel deployed main branch</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2 id="questions">10. Questions Answered</h2>
+        
+        <div class="section">
+            <h3>Q1: Will n8n workflows need changes?</h3>
+            <p><strong>Answer:</strong> ✅ YES - Update HTTP nodes to call RPC function</p>
+            <ul>
+                <li><strong>What changes:</strong> HTTP nodes that write progress updates</li>
+                <li><strong>What doesn't change:</strong> Webhook URLs, workflow logic</li>
+                <li><strong>Time:</strong> ~10 minutes per workflow</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Q2: Can I run all 5 automations simultaneously?</h3>
+            <p><strong>Answer:</strong> ✅ YES - 100% safe, no conflicts</p>
+            <p><strong>Why:</strong> Each automation gets its own database row. The UNIQUE constraint <code>(product_id, automation_type)</code> ensures isolation.</p>
+            <p><strong>You can click all 5 "Generate" buttons within 1 second and they'll all work perfectly.</strong></p>
+        </div>
+
+        <div class="section">
+            <h3>Q3: Before/After when I click "Generate Banners"</h3>
+            <p><strong>BEFORE:</strong> Race conditions, data loss, progress bars stuck</p>
+            <p><strong>AFTER:</strong> Separate rows per automation, no conflicts, accurate real-time progress</p>
+            <p>See detailed timeline comparison in full documentation.</p>
+        </div>
+
+        <div class="section">
+            <h3>Q4: How does frontend know automation status?</h3>
+            <p><strong>Answer:</strong> Query <code>automation_runs</code> table with separate Supabase subscriptions per automation type</p>
+            <pre><code>// BEFORE: Watch products.metadata (shared)
+supabase.on('postgres_changes', {table: 'products'}, ...)
+
+// AFTER: Watch automation_runs (isolated)
+supabase.on('postgres_changes', {
+  table: 'automation_runs',
+  filter: 'product_id=eq.123&automation_type=eq.banner'
+}, ...)</code></pre>
+        </div>
+
+        <h2 id="standards">11. Automation Standards</h2>
+        
+        <div class="section">
+            <h3>Database Rules</h3>
+            <ul>
+                <li>❌ <strong>NEVER</strong> write to <code>products.metadata</code> for automation state</li>
+                <li>✅ <strong>ALWAYS</strong> use <code>automation_runs</code> table</li>
+                <li>✅ Each automation must have unique <code>automation_type</code> identifier</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Webhook Handler Rules</h3>
+            <ul>
+                <li>✅ Must include: <code>product_id</code>, <code>user_id</code>, <code>automation_type</code>, <code>status</code>, <code>progress</code></li>
+                <li>✅ Use consistent status values: <code>idle</code>, <code>processing</code>, <code>completed</code>, <code>error</code>, <code>stopped</code></li>
+                <li>✅ Progress must be 0-100 (integer)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Adding New Automations Checklist</h3>
+            <ol>
+                <li>Add <code>automation_type</code> to ENUM (database migration)</li>
+                <li>Create API endpoint: <code>/api/automation/my_new_automation.js</code></li>
+                <li>Add trigger function to <code>automation.js</code></li>
+                <li>Create UI component</li>
+                <li>Set up n8n workflow with RPC calls</li>
+                <li>Test in isolation</li>
+                <li>Test with existing automations</li>
+                <li>Run regression tests</li>
+            </ol>
+        </div>
+
+        <h2>📌 Next Steps</h2>
+        
+        <div class="highlight success">
+            <h3>Ready for Implementation</h3>
+            <p>All prep work complete:</p>
+            <ul>
+                <li>✅ Database backed up</li>
+                <li>✅ Git branch: <code>refactor-automation-isolation</code></li>
+                <li>✅ Comprehensive plan documented</li>
+                <li>✅ Safety measures in place</li>
+            </ul>
+            
+            <p><strong>To proceed:</strong> Reply with "Proceed with Phase 1"</p>
+            
+            <p><strong>After Phase 1:</strong> I'll test extensively and report results before touching anything else.</p>
+            
+            <p><strong>Questions?</strong> Ask about any part of the plan.</p>
+        </div>
+
+        <div style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; text-align: center;">
+            <p>LaunchPad Automation Refactor Documentation</p>
+            <p>Generated: February 9, 2026 | Branch: refactor-automation-isolation</p>
+        </div>
+    </div>
+</body>
+</html>
