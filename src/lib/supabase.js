@@ -13,9 +13,25 @@ export const supabase = supabaseUrl && supabaseAnonKey
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      // Enable debug mode in development
+      global: {
+        headers: {
+          'x-client-info': 'launchpad-app@1.0.0'
+        }
       }
     })
   : null
+
+// Debug: Log realtime connection status
+if (supabase && import.meta.env.DEV) {
+  console.log('[Supabase] Client initialized with realtime enabled')
+}
 
 // Auth helpers
 export const auth = {

@@ -178,9 +178,11 @@ export const updateProductAutomationStatus = async (productId, updates) => {
  */
 export const subscribeToAutomationUpdates = (productId, callback) => {
   if (!supabase) {
-    console.warn('Supabase not configured, cannot subscribe to updates')
+    console.warn('[Automation] Supabase not configured, cannot subscribe to updates')
     return () => {}
   }
+
+  console.log('[Automation] Setting up real-time subscription for product:', productId)
 
   // Track latest state to merge updates
   let latestState = {
@@ -192,13 +194,20 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
 
   // Helper to fetch latest banners
   const fetchBanners = async () => {
-    const { data } = await supabase
+    console.log('[Automation] Fetching banners for product:', productId)
+    const { data, error } = await supabase
       .from('assets')
       .select('*')
       .eq('product_id', productId)
       .eq('type', 'banner')
       .order('created_at', { ascending: true })
     
+    if (error) {
+      console.error('[Automation] Error fetching banners:', error)
+      return []
+    }
+    
+    console.log('[Automation] Found banners:', data?.length || 0)
     return (data || []).map(asset => ({
       id: asset.id,
       url: asset.file_url,
@@ -208,8 +217,11 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
     }))
   }
 
+  const channelName = `automation-banner-${productId}`
+  console.log('[Automation] Creating channel:', channelName)
+
   const channel = supabase
-    .channel(`automation-banner-${productId}`)
+    .channel(channelName)
     // PHASE 1: Watch automation_runs for banner progress (not products.metadata)
     .on(
       'postgres_changes',
@@ -220,6 +232,7 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
         filter: `product_id=eq.${productId}&automation_type=eq.banner`
       },
       async (payload) => {
+        console.log('[Automation] Received automation_runs update:', payload)
         const run = payload.new
         
         // Fetch latest banners from assets
@@ -233,6 +246,7 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
           completedAt: run.completed_at,
           banners: banners,
         }
+        console.log('[Automation] Updated state:', latestState)
         callback(latestState)
       }
     )
@@ -246,18 +260,30 @@ export const subscribeToAutomationUpdates = (productId, callback) => {
         filter: `product_id=eq.${productId}`
       },
       async (payload) => {
+        console.log('[Automation] Received asset insert:', payload)
         if (payload.new.type === 'banner') {
           // Fetch all banners to get complete list
           const banners = await fetchBanners()
           latestState.banners = banners
+          console.log('[Automation] Updated banners, total:', banners.length)
           callback(latestState)
         }
       }
     )
-    .subscribe()
+    .subscribe((status) => {
+      console.log('[Automation] Subscription status:', status)
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ [Automation] Successfully subscribed to real-time updates')
+      } else if (status === 'CLOSED') {
+        console.error('❌ [Automation] Subscription closed')
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ [Automation] Channel error - check RLS policies and realtime settings')
+      }
+    })
 
   // Return unsubscribe function
   return () => {
+    console.log('[Automation] Unsubscribing from channel:', channelName)
     supabase.removeChannel(channel)
   }
 }
